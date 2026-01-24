@@ -13,7 +13,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CheckCircle2 } from "lucide-react";
-import Navbar from "@/components/Navbar";
 import { useWallet } from "@/context/wallet-provider";
 import {
   Contract,
@@ -84,78 +83,134 @@ export default function CreatePaymentPage() {
       // --- Stellar Contract Logic ---
       const server = new SorobanRpc.Server(RPC_URL);
       const contract = new Contract(CONTRACT_ID);
-      const account = await server.getAccount(publicKey);
-
+      const tokenContract = new Contract(process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2EZ4YXL");
+      
       // Convert interval string to seconds
       let intervalSeconds = 2592000; // Monthly default
       if (formData.interval === "weekly") intervalSeconds = 604800;
-      if (formData.interval === "custom") intervalSeconds = 60; // Just as an example placeholder
+      if (formData.interval === "custom") intervalSeconds = 60;
 
       // Amount with decimals (assuming 7 decimals for USDC/Stellar tokens usually)
       const amountBigInt = BigInt(
         Math.floor(parseFloat(formData.amount) * 10000000),
       );
 
-      const transaction = new TransactionBuilder(account, {
+      // For AutoPay, we need to approve the contract to spend tokens
+      const approvalAmount = amountBigInt * BigInt(100);
+
+      // Get current ledger for approval expiration
+      const ledgerResponse = await server.getLatestLedger();
+      const currentLedger = ledgerResponse.sequence;
+      // Max allowed is ~3.1M ledgers, so use 2M (~115 days at 5s/ledger) to be safe
+      const expirationLedger = currentLedger + 2000000;
+
+      // === STEP 1: Approve Token Spending ===
+      console.log("Step 1: Approving token spending...");
+      const account1 = await server.getAccount(publicKey);
+      
+      const approvalTx = new TransactionBuilder(account1, {
         fee: BASE_FEE,
-        networkPassphrase:
-          Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
+        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
+      })
+        .addOperation(
+          tokenContract.call(
+            "approve",
+            nativeToScVal(publicKey, { type: "address" }),
+            nativeToScVal(CONTRACT_ID, { type: "address" }),
+            nativeToScVal(approvalAmount, { type: "i128" }),
+            nativeToScVal(expirationLedger, { type: "u32" }),
+          )
+        )
+        .setTimeout(30)
+        .build();
+
+      // Simulate approval transaction
+      const simulatedApproval = await server.simulateTransaction(approvalTx);
+      if (SorobanRpc.Api.isSimulationError(simulatedApproval)) {
+        throw new Error(`Approval simulation failed: ${simulatedApproval.error}`);
+      }
+
+      const preparedApprovalTx = SorobanRpc.assembleTransaction(approvalTx, simulatedApproval).build();
+
+      // Sign and send approval
+      const approvalSignedResult = await signTransaction(preparedApprovalTx.toXDR(), {
+        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
+      });
+
+      let approvalSignedXdr = "";
+      if (typeof approvalSignedResult === "string") {
+        approvalSignedXdr = approvalSignedResult;
+      } else if ("signedTxXdr" in approvalSignedResult) {
+        approvalSignedXdr = (approvalSignedResult as any).signedTxXdr;
+      }
+
+      if (!approvalSignedXdr) {
+        throw new Error("Failed to sign approval transaction");
+      }
+
+      const signedApprovalTx = TransactionBuilder.fromXDR(
+        approvalSignedXdr,
+        Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
+      );
+
+      console.log("Sending approval transaction...");
+      await server.sendTransaction(signedApprovalTx);
+      
+      // Wait a bit for approval to be processed
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // === STEP 2: Create Payment ===
+      console.log("Step 2: Creating recurring payment...");
+      const account2 = await server.getAccount(publicKey);
+
+      const paymentTx = new TransactionBuilder(account2, {
+        fee: BASE_FEE,
+        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
       })
         .addOperation(
           contract.call(
-            "create_payment",
-            // 1. Payer (the connected wallet)
-            nativeToScVal(publicKey, { type: "address" }),
-            // 2. Recipient
-            nativeToScVal(receiverAddress, { type: "address" }),
-            // 3. Token address (you need to set a valid token contract address)
-            nativeToScVal(process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2EZ4YXL", { type: "address" }),
-            // 4. Amount
-            nativeToScVal(amountBigInt, { type: "i128" }),
-            // 5. Interval in seconds
-            nativeToScVal(intervalSeconds, { type: "u64" }),
-            // 6. SubscriptionType: AutoPay or Prepaid (passed as symbol)
-            nativeToScVal("AutoPay", { type: "symbol" }),
-            // 7. Total cycles (0 for unlimited in AutoPay mode)
-            nativeToScVal(BigInt(0), { type: "u64" }),
-            // 8. ChargeStart: Immediate or Delayed (passed as symbol)
-            nativeToScVal("Immediate", { type: "symbol" }),
+            "subscribe_to_plan",
+            nativeToScVal(publicKey, { type: "address" }), // payer
+            nativeToScVal(1, { type: "u32" }), // plan_id (using plan 1)
+            nativeToScVal(receiverAddress, { type: "address" }), // recipient
+            nativeToScVal(BigInt(0), { type: "u64" }), // total_cycles (0 = unlimited)
+            nativeToScVal("AutoPay", { type: "symbol" }), // sub_type
           ),
         )
         .setTimeout(30)
         .build();
 
-      const signedResult = await signTransaction(transaction.toXDR(), {
-        networkPassphrase:
-          Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
+      // Simulate payment creation
+      const simulatedPayment = await server.simulateTransaction(paymentTx);
+      if (SorobanRpc.Api.isSimulationError(simulatedPayment)) {
+        throw new Error(`Payment creation simulation failed: ${simulatedPayment.error}`);
+      }
+
+      const preparedPaymentTx = SorobanRpc.assembleTransaction(paymentTx, simulatedPayment).build();
+
+      // Sign and send payment creation
+      const paymentSignedResult = await signTransaction(preparedPaymentTx.toXDR(), {
+        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
       });
 
-      if ("error" in signedResult && signedResult.error) {
-        throw new Error(signedResult.error);
+      let paymentSignedXdr = "";
+      if (typeof paymentSignedResult === "string") {
+        paymentSignedXdr = paymentSignedResult;
+      } else if ("signedTxXdr" in paymentSignedResult) {
+        paymentSignedXdr = (paymentSignedResult as any).signedTxXdr;
       }
 
-      // Determine correct XDR string
-      let signedXdrString = "";
-      if (typeof signedResult === "string") {
-        signedXdrString = signedResult;
-      } else if ("signedTxXdr" in signedResult) {
-        // @ts-ignore
-        signedXdrString = signedResult.signedTxXdr;
-      } else if ("signedXDR" in signedResult) {
-        // @ts-ignore
-        signedXdrString = signedResult.signedXDR;
+      if (!paymentSignedXdr) {
+        throw new Error("Failed to sign payment transaction");
       }
 
-      if (!signedXdrString) {
-        throw new Error("Failed to sign transaction");
-      }
-
-      const signedTx = TransactionBuilder.fromXDR(
-        signedXdrString,
+      const signedPaymentTx = TransactionBuilder.fromXDR(
+        paymentSignedXdr,
         Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
       );
 
-      await server.sendTransaction(signedTx);
+      console.log("Sending payment creation transaction...");
+      await server.sendTransaction(signedPaymentTx);
 
       // Success!
       setFormStep("confirmation");
@@ -174,146 +229,115 @@ export default function CreatePaymentPage() {
   // --- Render Confirmation View ---
   if (formStep === "confirmation") {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        {/* FIX: Added pt-24 here */}
-        <div className="max-w-2xl mx-auto px-6 pt-24 pb-8">
-          <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            <div className="text-center">
+      <div className="flex flex-col items-center justify-center p-8 bg-background h-full">
+            <div className="text-center slide-up-text">
               <div className="flex justify-center mb-6">
                 <div className="relative">
                   <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse" />
                   <CheckCircle2 className="w-20 h-20 text-primary relative z-10" />
                 </div>
               </div>
-              <h2 className="text-3xl font-bold text-foreground mb-2">
-                Payment Created Successfully
+              <h2 className="text-3xl font-display text-foreground mb-2">
+                PAYMENT INITIALIZED
               </h2>
-              <p className="text-muted-foreground mb-6">
-                Your recurring payment has been scheduled on-chain
+              <p className="text-muted-foreground mb-6 font-bold">
+                ON-CHAIN SCHEDULE CONFIRMED
               </p>
-              <div className="bg-secondary/50 border border-border rounded-lg p-6 text-left mb-8">
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Receiver</span>
-                    <span className="font-mono text-foreground text-sm">
-                      {formData.receiver}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Amount</span>
-                    <span className="font-semibold text-foreground">
-                      {formData.amount} {formData.token}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Interval</span>
-                    <span className="text-foreground capitalize">
-                      {formData.interval}
-                    </span>
-                  </div>
-                </div>
+              
+              <div className="bg-canvas border-[3px] border-ink p-6 text-left mb-8 shadow-sm">
+                 {/* Details... */}
+                 <p className="font-mono text-sm">Target: {formData.receiver}</p>
+                 <p className="font-mono text-xl font-bold">{formData.amount} {formData.token}</p>
+                 <p className="font-mono text-sm uppercase">{formData.interval}</p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Redirecting you back to dashboard...
+
+              <p className="text-sm font-bold animate-pulse">
+                REDIRECTING TO GRID...
               </p>
             </div>
-          </div>
-        </div>
       </div>
     );
   }
 
   // --- Render Form View ---
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      {/* FIX: Added pt-24 here */}
-      <div className="max-w-2xl mx-auto px-6 pt-24 pb-8">
+    <div className="max-w-3xl mx-auto py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Create Recurring Payment
+        <div className="mb-8 border-b-[3px] border-ink pb-4">
+          <h1 className="text-5xl mb-2 text-primary">
+            NEW FORM
           </h1>
-          <p className="text-muted-foreground">
-            Set up a new automated on-chain payment using stablecoins
+          <p className="font-bold text-xl">
+            AUTO-PAYMENT PROTOCOL
           </p>
         </div>
 
-        <Card className="p-8 border-border bg-card">
+        <Card className="p-8 bg-accent shadow-[15px_15px_0_rgba(20,20,20,0.1)]">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Receiver Wallet Address */}
             <div className="space-y-2">
-              <Label htmlFor="receiver" className="text-foreground">
-                Receiver Wallet Address
+              <Label htmlFor="receiver" className="text-foreground font-bold uppercase">
+                Receiver Public Key
               </Label>
               <Input
                 id="receiver"
                 placeholder="G..."
                 value={formData.receiver}
                 onChange={(e) => handleInputChange("receiver", e.target.value)}
-                className="bg-secondary/20 border-border text-foreground placeholder:text-muted-foreground"
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                Enter the recipient's Stellar Public Key (starting with G)
-              </p>
             </div>
 
             {/* Token Selector */}
             <div className="space-y-2">
-              <Label htmlFor="token" className="text-foreground">
-                Token
+              <Label htmlFor="token" className="text-foreground font-bold uppercase">
+                Asset
               </Label>
               <Select
                 value={formData.token}
                 onValueChange={(value: string) => handleInputChange("token", value)}
               >
-                <SelectTrigger className="bg-secondary/20 border-border text-foreground">
+                <SelectTrigger className="bg-white border-[1px] border-ink rounded-none h-12 font-bold">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USDC">USDC</SelectItem>
-                  <SelectItem value="XLM">XLM</SelectItem>
+                  <SelectItem value="USDC">USDC (Testnet)</SelectItem>
+                  <SelectItem value="XLM">XLM (Native)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Amount */}
             <div className="space-y-2">
-              <Label htmlFor="amount" className="text-foreground">
-                Amount
+              <Label htmlFor="amount" className="text-foreground font-bold uppercase">
+                Volume (Amount)
               </Label>
               <Input
                 id="amount"
                 type="number"
-                placeholder="1000"
+                placeholder="0.00"
                 value={formData.amount}
                 onChange={(e) => handleInputChange("amount", e.target.value)}
-                className="bg-secondary/20 border-border text-foreground placeholder:text-muted-foreground"
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                Amount in {formData.token} to send each interval
-              </p>
             </div>
 
             {/* Interval Selector */}
             <div className="space-y-2">
-              <Label htmlFor="interval" className="text-foreground">
-                Interval
+              <Label htmlFor="interval" className="text-foreground font-bold uppercase">
+                Frequency
               </Label>
               <Select
                 value={formData.interval}
                 onValueChange={(value: string) => handleInputChange("interval", value)}
               >
-                <SelectTrigger className="bg-secondary/20 border-border text-foreground">
+                <SelectTrigger className="bg-white border-[1px] border-ink rounded-none h-12 font-bold">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="custom">Custom (Demo: 60s)</SelectItem>
+                  <SelectItem value="weekly">WEEKLY</SelectItem>
+                  <SelectItem value="monthly">MONTHLY</SelectItem>
+                  <SelectItem value="custom">CUSTOM (TEST)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -322,37 +346,33 @@ export default function CreatePaymentPage() {
             <Button
               type="submit"
               disabled={loading || !walletConnected}
-              className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base disabled:opacity-50"
+              className="w-full text-xl h-14 mt-8"
+              size="lg"
             >
               {loading
-                ? "Processing..."
+                ? "PROCESSING..."
                 : walletConnected
-                  ? "Create Recurring Payment"
-                  : "Connect Wallet First"}
+                  ? "CONFIRM TRANSACTION"
+                  : "WALLET DISCONNECTED"}
             </Button>
           </form>
         </Card>
 
         {/* Info Section */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6 border-border bg-secondary/20">
-            <h3 className="font-semibold text-foreground mb-3">Security</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              All transactions are non-custodial and verified on-chain. You
-              maintain complete control over your funds.
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-4 border-l-[3px] border-ink">
+            <h3 className="font-bold text-lg mb-2">SECURITY PROTOCOL</h3>
+            <p className="text-sm">
+              Non-custodial. Verified on-chain execution.
             </p>
-          </Card>
-          <Card className="p-6 border-border bg-secondary/20">
-            <h3 className="font-semibold text-foreground mb-3">
-              Gas Optimization
-            </h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Payments are batched and optimized to minimize gas costs while
-              maintaining reliability.
+          </div>
+          <div className="p-4 border-l-[3px] border-ink">
+            <h3 className="font-bold text-lg mb-2">OPTIMIZATION</h3>
+            <p className="text-sm">
+              Batch processing active. Gas efficiency max.
             </p>
-          </Card>
+          </div>
         </div>
-      </div>
     </div>
   );
 }

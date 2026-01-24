@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import WalletConnect from "@/components/WalletConnect";
+// Remove useAuth if not using real auth, or keep it. Steps showed useAuth usage.
 import { useAuth } from "@/context/FakeAuthContext";
 
 export default function Navbar() {
@@ -11,84 +12,66 @@ export default function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 bg-background/80 border-b border-border h-16 z-50 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
-        {/* Logo Area */}
-        <div className="flex items-center gap-8">
-          <Link
-            href="/"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shadow-sm">
-              <span className="text-primary-foreground font-bold text-lg">
-                Q
-              </span>
-            </div>
-            <span className="text-xl font-bold text-foreground hidden sm:inline">
-              QuantX
-            </span>
+    <header className="sticky top-0 z-50 bg-background border-b-[3px] border-ink px-8 py-4 flex justify-between items-center">
+      {/* Skewed Logo */}
+      <Link href="/" className="font-display text-2xl bg-ink text-canvas px-2 -skew-x-[10deg] hover:bg-primary transition-colors">
+        QUANT X
+      </Link>
+
+      <nav className="hidden md:flex items-center">
+        {user && (
+          <div className="flex gap-8 mr-8">
+            <NavLink href="/" active={pathname === "/"}>
+              HOME
+            </NavLink>
+            <NavLink href="/dashboard" active={pathname === "/dashboard"}>
+              DASHBOARD
+            </NavLink>
+            <NavLink href="/create" active={pathname === "/create"}>
+              STREAM
+            </NavLink>
+          </div>
+        )}
+      </nav>
+
+      {/* Right Side Actions */}
+      <div className="flex items-center gap-4">
+        <WalletConnect />
+
+        {user ? (
+          <div className="flex items-center gap-4 pl-4 border-l-[3px] border-ink ml-2">
+             <span className="text-xs font-bold font-mono hidden sm:inline-block">
+                {user.name}
+             </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={logout}
+              className="text-destructive hover:text-white"
+            >
+              EXIT
+            </Button>
+          </div>
+        ) : (
+          <Link href="/login">
+            <Button>
+              ENTER
+            </Button>
           </Link>
-
-          {/* Navigation Links - Only if logged in */}
-          {user && (
-            <div className="hidden md:flex gap-6 items-center">
-              <Link
-                href="/create"
-                className={`text-sm font-medium transition-colors ${
-                  pathname === "/create"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Create Plan
-              </Link>
-              <Link
-                href="/dashboard"
-                className={`text-sm font-medium transition-colors ${
-                  pathname === "/dashboard"
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Dashboard
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* Right Side Actions */}
-        <div className="flex items-center gap-4">
-          <WalletConnect />
-
-          {/* User Profile / Logout */}
-          {user ? (
-            <div className="flex items-center gap-3 pl-4 border-l border-border ml-2">
-              <div className="hidden sm:flex flex-col text-right">
-                <span className="text-xs font-bold text-foreground">
-                  {user.name}
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={logout}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
-              >
-                Sign Out
-              </Button>
-            </div>
-          ) : (
-            <Link href="/login">
-              <Button
-                size="sm"
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Sign In
-              </Button>
-            </Link>
-          )}
-        </div>
+        )}
       </div>
-    </nav>
+    </header>
+  );
+}
+
+function NavLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={`relative font-bold uppercase text-ink no-underline hover:text-primary transition-colors group ${active ? 'text-primary' : ''}`}
+    >
+      {children}
+      <span className={`absolute -bottom-1 left-0 w-full h-[3px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform origin-left ${active ? 'scale-x-100' : ''}`} />
+    </Link>
   );
 }

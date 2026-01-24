@@ -3,7 +3,16 @@
  * Loads and validates all required environment variables
  */
 
-require("dotenv").config();
+const path = require("path");
+const result = require("dotenv").config({
+  path: path.join(__dirname, "../.env"),
+});
+
+if (result.error) {
+  console.error("[Config] Error loading .env file:", result.error);
+} else {
+  console.log("[Config] Loaded .env from:", path.join(__dirname, "../.env"));
+}
 
 const env = {
   // Server

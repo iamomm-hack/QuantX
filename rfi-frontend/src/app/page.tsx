@@ -4,86 +4,111 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/FakeAuthContext";
 import { useWallet } from "@/context/wallet-provider";
-import Navbar from "@/components/Navbar"; // Ensure Navbar is included if you want it on Home
 
 export default function Home() {
-  const { user, logout } = useAuth();
-  const { isConnected: walletConnected, address: publicKey } = useWallet();
+  const { user } = useAuth();
+  const { isConnected: walletConnected } = useWallet();
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Optional: Add Navbar here if you want consistency */}
-      <Navbar />
-
-      <main className="flex-1 flex flex-col items-center justify-center p-8 gap-8 relative">
-        {/* Top Right User Profile (Demo) - Only if not using Navbar */}
-        {/* 
-        {user && (
-          <div className="absolute top-5 right-10 flex items-center gap-4">
-             ... (Keep this if you aren't using the standard Navbar)
-          </div>
-        )}
-        */}
-
-        <div className="text-center space-y-6 max-w-2xl animate-in fade-in zoom-in duration-700">
-          <h1 className="text-6xl font-extrabold tracking-tight text-foreground">
-            ⚡ QuantX
+    <div className="flex flex-col justify-center h-full min-h-[60vh]">
+       {/* Hero Section */}
+       <section className="p-0 relative">
+          {/* Decorative Circle */}
+          <div className="absolute top-0 right-10 w-[150px] h-[150px] bg-destructive rounded-full -z-10 hidden md:block" />
+          
+          <span className="txt-small text-primary block mb-2">Protocol V1.0</span>
+          <h1 className="leading-[0.8] mb-6">
+            QUANT X<br />
+            FINANCE
           </h1>
-          <p className="text-2xl text-muted-foreground">
-            Recurring Finance Infrastructure. <br />
-            <span className="text-lg text-muted-foreground/80">
-              Automated payroll and subscriptions on Stellar.
-            </span>
+          
+          <p className="text-xl font-medium max-w-[45ch] mb-8 slide-reveal" style={{animationDelay: '0.1s'}}>
+            Automated recurring payments on Stellar.
+            <span className="bg-destructive text-white px-2 mx-1">Trustless</span>
+            payroll, subscriptions, and allowances. Zero friction. Total control.
           </p>
-          {process.env.NEXT_PUBLIC_DEV_MODE === "true" && (
-            <span className="inline-block px-3 py-1 bg-accent/20 text-accent-foreground rounded-lg text-sm font-semibold border border-accent/20">
-              🔧 DEV MODE
-            </span>
-          )}
-        </div>
 
-        <div className="flex flex-col gap-4 items-center mt-8">
-          {!user ? (
-            // IF NOT LOGGED IN
-            <Link href="/login">
-              <Button
-                size="lg"
-                className="px-10 py-6 text-lg shadow-xl transition-all hover:scale-105"
-              >
-                Get Started →
-              </Button>
-            </Link>
-          ) : !walletConnected ? (
-            // IF LOGGED IN BUT WALLET NOT CONNECTED
-            <div className="text-center space-y-4 bg-card p-6 rounded-xl border border-border shadow-sm">
-              <p className="text-card-foreground font-medium">
-                Please connect your Freighter wallet to continue
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Click the "Connect Wallet" button in the navigation bar
-              </p>
+          <div className="flex flex-wrap gap-4 slide-reveal" style={{animationDelay: '0.3s'}}>
+             {!user ? (
+                <Link href="/login">
+                  <Button size="lg" className="h-16 text-2xl px-12">
+                    ACCESS TERMINAL
+                  </Button>
+                </Link>
+             ) : !walletConnected ? (
+                <div className="p-6 border-[3px] border-ink bg-yellow-100 max-w-md">
+                   <p className="font-bold font-display text-xl mb-2">Wallet Disconnected</p>
+                   <p className="text-sm font-mono">Connect Freighter wallet in header to proceed.</p>
+                </div>
+             ) : (
+                <>
+                  <Link href="/dashboard">
+                    <Button size="lg" className="h-16 text-2xl px-12">
+                      OPEN DASHBOARD
+                    </Button>
+                  </Link>
+                  <Link href="/plans">
+                    <Button variant="outline" size="lg" className="h-16 text-2xl px-12 hover:bg-primary hover:text-white transition-all">
+                      VIEW PLANS
+                    </Button>
+                  </Link>
+                  <Link href="/create">
+                    <Button variant="outline" size="lg" className="h-16 text-2xl px-12 hover:bg-ink hover:text-white transition-all">
+                      NEW STREAM
+                    </Button>
+                  </Link>
+                </>
+             )}
+          </div>
+       </section>
+
+       {/* Divider */}
+       <div className="my-12 h-5 w-full border-t-[3px] border-b-[3px] border-ink" 
+            style={{
+              background: `repeating-linear-gradient(90deg, var(--color-ink), var(--color-ink) 2px, transparent 2px, transparent 10px)`
+            }} 
+       />
+
+       {/* Secondary Section */}
+       <section className="grid md:grid-cols-2 gap-12">
+         <div>
+            <h2 className="mb-4">NETWORK STATUS</h2>
+            <div className="p-8 bg-accent border-[3px] border-ink shadow-[15px_15px_0_rgba(0,0,0,0.1)]">
+              <div className="space-y-4 font-bold">
+                 <div className="border-b border-ink py-2 flex justify-between">
+                    <span>PROTOCOL</span>
+                    <span>SOROBAN SMART CONTRACT</span>
+                 </div>
+                 <div className="border-b border-ink py-2 flex justify-between">
+                    <span>NETWORK</span>
+                    <span>STELLAR TESTNET</span>
+                 </div>
+                 <div className="border-b border-ink py-2 flex justify-between">
+                    <span>STATUS</span>
+                    <span className="text-emerald-700 bg-emerald-100 px-2">OPERATIONAL</span>
+                 </div>
+              </div>
             </div>
-          ) : (
-            // IF LOGGED IN AND WALLET CONNECTED
-            <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <Link href="/dashboard">
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  className="px-8 shadow-sm"
-                >
-                  View Dashboard
-                </Button>
-              </Link>
-              <Link href="/create">
-                <Button size="lg" className="px-8 shadow-lg">
-                  Create New Plan +
-                </Button>
-              </Link>
-            </div>
-          )}
-        </div>
-      </main>
+         </div>
+         
+         <div>
+            <h2 className="mb-4">CORE FEATURES</h2>
+            <ul className="list-none counter-reset-list">
+               <li className="flex items-center text-xl font-bold border-b border-ink py-4">
+                  <span className="w-8 h-8 rounded-full bg-ink text-canvas flex items-center justify-center mr-4 text-sm">1</span>
+                  Non-Custodial Assets
+               </li>
+               <li className="flex items-center text-xl font-bold border-b border-ink py-4">
+                  <span className="w-8 h-8 rounded-full bg-ink text-canvas flex items-center justify-center mr-4 text-sm">2</span>
+                  Low-Cost Execution
+               </li>
+               <li className="flex items-center text-xl font-bold border-b border-ink py-4">
+                  <span className="w-8 h-8 rounded-full bg-ink text-canvas flex items-center justify-center mr-4 text-sm">3</span>
+                  Automated Scheduling
+               </li>
+            </ul>
+         </div>
+       </section>
     </div>
   );
 }

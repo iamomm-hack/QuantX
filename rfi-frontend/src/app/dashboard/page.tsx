@@ -243,13 +243,13 @@ export default function DashboardPage() {
 
   if (!isConnected) {
     return (
-      <div className="flex h-[400px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50">
+      <div className="flex h-[400px] items-center justify-center border-[3px] border-ink border-dashed bg-muted/20">
         <div className="text-center">
-          <h3 className="mt-2 text-sm font-semibold text-slate-900">
-            Wallet not connected
+          <h3 className="mt-2 text-xl font-bold font-display uppercase">
+            Wallet Disconnected
           </h3>
-          <p className="mt-1 text-sm text-slate-500">
-            Please connect your wallet to view subscriptions.
+          <p className="mt-1 text-sm font-medium">
+            Connect your wallet to access the Grid.
           </p>
         </div>
       </div>
@@ -257,82 +257,78 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between border-b-[3px] border-ink pb-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-            Subscriptions
+          <h2 className="text-4xl font-display text-primary mb-2">
+            GRID VIEW
           </h2>
-          <p className="text-sm text-slate-500">
-            Manage your recurring crypto payments.
+          <p className="text-sm font-bold tracking-wider uppercase text-muted-foreground">
+            Active Protocols & Recurring Streams
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-4">
           <Button
             variant="outline"
-            size="sm"
             onClick={fetchSubscriptions}
             disabled={loading}
+            className="border-[2px]"
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
+            SYNC
           </Button>
-          <Button asChild className="bg-indigo-600 hover:bg-indigo-700">
+          <Button asChild>
             <Link href="/create">
-              <Plus className="mr-2 h-4 w-4" /> Create New
+              <Plus className="mr-2 h-4 w-4" /> INITIATE NEW
             </Link>
           </Button>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="bg-destructive/10 border-[3px] border-destructive text-destructive px-4 py-3 font-bold">
           {error}
         </div>
       )}
 
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader className="p-6 pb-2">
-          {/* Optional header content if needed */}
-        </CardHeader>
+      <Card className="min-h-[400px]">
         <CardContent className="p-0">
           {loading ? (
             <div className="flex h-[300px] items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : data.length === 0 ? (
             // --- Empty State ---
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="bg-slate-100 p-4 rounded-full mb-4">
-                <Plus className="h-8 w-8 text-slate-400" />
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="bg-muted p-6 rounded-full mb-6 border-[3px] border-ink">
+                <Plus className="h-10 w-10 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-medium text-slate-900">
-                No subscriptions found
+              <h3 className="text-2xl font-bold font-display uppercase mb-2">
+                Grid Empty
               </h3>
-              <p className="text-sm text-slate-500 mt-1 max-w-sm">
-                You haven't set up any recurring payments yet. Create one to get
-                started.
+              <p className="text-muted-foreground mb-8 max-w-sm font-medium">
+                No active streams detected on the network.
               </p>
-              <Button asChild variant="outline" className="mt-6">
-                <Link href="/create">Create Subscription</Link>
+              <Button asChild size="lg">
+                <Link href="/create">INITIALIZE PROTOCOL</Link>
               </Button>
             </div>
           ) : (
             // --- Data Table ---
             <Table>
-              <TableHeader className="bg-slate-50">
+              <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead>Recipient / ID</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Interval</TableHead>
-                  <TableHead>Next Execution</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-[120px]">STATUS</TableHead>
+                  <TableHead>TARGET ID</TableHead>
+                  <TableHead>VOLUME</TableHead>
+                  <TableHead>FREQUENCY</TableHead>
+                  <TableHead>NEXT EVENT</TableHead>
+                  <TableHead className="text-right">CONTROLS</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.map((sub) => (
-                  <TableRow key={sub.id} className="hover:bg-slate-50/50">
+                  <TableRow key={sub.id}>
                     {/* Status Badge */}
                     <TableCell>
                       <StatusBadge status={sub.status} />
@@ -341,32 +337,32 @@ export default function DashboardPage() {
                     {/* ID & Recipient */}
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-slate-900">
+                        <span className="font-bold text-lg font-display">
                           #{sub.id}
                         </span>
-                        <span className="text-xs text-slate-500 font-mono truncate max-w-[120px]">
+                        <span className="text-xs text-muted-foreground font-mono truncate max-w-[140px] bg-muted/30 p-1">
                           {sub.recipient.slice(0, 8)}...{sub.recipient.slice(-4)}
                         </span>
                       </div>
                     </TableCell>
 
                     {/* Amount */}
-                    <TableCell className="font-medium text-slate-900">
+                    <TableCell className="font-bold text-lg">
                       {sub.amount.toFixed(2)}{" "}
-                      <span className="text-slate-500 text-xs">
+                      <span className="text-xs font-normal text-muted-foreground ml-1">
                         {sub.token}
                       </span>
                     </TableCell>
 
                     {/* Interval */}
-                    <TableCell className="text-slate-600">
+                    <TableCell className="uppercase font-bold tracking-wider text-sm">
                       {sub.interval}
                     </TableCell>
 
                     {/* Next Execution Date */}
-                    <TableCell className="text-slate-600">
+                    <TableCell className="font-mono text-sm">
                       {sub.status === "Active" && sub.nextExecution > 0
-                        ? format(new Date(sub.nextExecution * 1000), "MMM d, yyyy")
+                        ? format(new Date(sub.nextExecution * 1000), "yyyy-MM-dd")
                         : "-"}
                     </TableCell>
 
@@ -376,56 +372,60 @@ export default function DashboardPage() {
                         <DropdownMenuTrigger asChild>
                           <Button 
                             variant="ghost" 
-                            className="h-8 w-8 p-0"
+                            className="h-10 w-10 p-0 border-[2px] border-transparent hover:border-ink hover:bg-transparent"
                             disabled={actionLoading === sub.id}
                           >
                             {actionLoading === sub.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                              <MoreHorizontal className="h-4 w-4" />
+                              <MoreHorizontal className="h-5 w-5" />
                             )}
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuContent align="end" className="border-[3px] border-ink rounded-none p-0">
+                          <DropdownMenuLabel className="bg-muted/50 border-b border-ink">ACTIONS</DropdownMenuLabel>
                           <DropdownMenuItem
                             onClick={() =>
                               navigator.clipboard.writeText(sub.id)
                             }
+                            className="focus:bg-primary focus:text-white rounded-none cursor-pointer"
                           >
-                            Copy ID
+                            COPY ID
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() =>
                               navigator.clipboard.writeText(sub.recipient)
                             }
+                            className="focus:bg-primary focus:text-white rounded-none cursor-pointer"
                           >
-                            Copy Recipient
+                            COPY ADDRESS
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
+                          <DropdownMenuSeparator className="bg-ink" />
 
                           {sub.status === "Active" && (
                             <DropdownMenuItem
                               onClick={() => handlePause(sub.id)}
+                              className="focus:bg-accent focus:text-ink rounded-none cursor-pointer"
                             >
-                              <Pause className="mr-2 h-4 w-4" /> Pause
+                              <Pause className="mr-2 h-4 w-4" /> PAUSE
                             </DropdownMenuItem>
                           )}
 
                           {sub.status === "Paused" && (
                             <DropdownMenuItem
                               onClick={() => handleResume(sub.id)}
+                              className="focus:bg-accent focus:text-ink rounded-none cursor-pointer"
                             >
-                              <Play className="mr-2 h-4 w-4" /> Resume
+                              <Play className="mr-2 h-4 w-4" /> RESUME
                             </DropdownMenuItem>
                           )}
 
                           {(sub.status === "Active" || sub.status === "Paused") && (
                             <DropdownMenuItem
                               onClick={() => handleCancel(sub.id)}
-                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                              className="text-destructive focus:bg-destructive focus:text-white rounded-none cursor-pointer font-bold"
                             >
-                              <Trash2 className="mr-2 h-4 w-4" /> Cancel
+                              <Trash2 className="mr-2 h-4 w-4" /> TERMINATE
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -445,28 +445,17 @@ export default function DashboardPage() {
 // Helper Component for Status Badges
 function StatusBadge({ status }: { status: SubscriptionStatus }) {
   const styles: Record<SubscriptionStatus, string> = {
-    Active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    Paused: "bg-amber-50 text-amber-700 border-amber-200",
-    Failed: "bg-red-50 text-red-700 border-red-200",
-    Cancelled: "bg-slate-100 text-slate-700 border-slate-200",
-    Completed: "bg-blue-50 text-blue-700 border-blue-200",
-  };
-
-  const dotStyles: Record<SubscriptionStatus, string> = {
-    Active: "bg-emerald-500",
-    Paused: "bg-amber-500",
-    Failed: "bg-red-500",
-    Cancelled: "bg-slate-400",
-    Completed: "bg-blue-500",
+    Active: "bg-emerald-100 text-emerald-900 border-emerald-900",
+    Paused: "bg-amber-100 text-amber-900 border-amber-900",
+    Failed: "bg-red-100 text-red-900 border-red-900",
+    Cancelled: "bg-slate-200 text-slate-900 border-slate-900",
+    Completed: "bg-blue-100 text-blue-900 border-blue-900",
   };
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${styles[status]}`}
+      className={`inline-flex items-center border-[2px] px-3 py-1 text-xs font-bold uppercase ${styles[status]}`}
     >
-      <span
-        className={`mr-1.5 flex h-2 w-2 rounded-full ${dotStyles[status]}`}
-      />
       {status}
     </span>
   );
