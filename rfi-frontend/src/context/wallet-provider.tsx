@@ -7,9 +7,8 @@ import {
   getAddress,
   getNetwork,
 } from "@stellar/freighter-api";
-import albedo from "@albedo-link/intent";
 
-type WalletType = "freighter" | "albedo" | null;
+type WalletType = "freighter" | null;
 type Network = "PUBLIC" | "TESTNET" | "UNKNOWN";
 
 interface WalletContextType {
@@ -81,19 +80,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // ✅ Albedo connect
-  const connectAlbedo = async () => {
-    try {
-      const res = await albedo.publicKey({});
-      setWalletState(true, res.pubkey, "albedo", "TESTNET");
-    } catch (e) {
-      console.error("Albedo connection denied:", e);
-    }
-  };
-
   const connect = async (type: WalletType) => {
     if (type === "freighter") await connectFreighter();
-    if (type === "albedo") await connectAlbedo();
   };
 
   const disconnect = () => {

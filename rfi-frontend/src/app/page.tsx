@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/FakeAuthContext";
-import { useWallet } from "@/context/WalletContext";
+import { useWallet } from "@/context/wallet-provider";
 import Navbar from "@/components/Navbar"; // Ensure Navbar is included if you want it on Home
 
 export default function Home() {
   const { user, logout } = useAuth();
-  const { walletConnected, publicKey } = useWallet();
+  const { isConnected: walletConnected, address: publicKey } = useWallet();
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">

@@ -10,6 +10,7 @@ import {
   Pause,
   Trash2,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -37,84 +38,208 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useWallet } from "@/context/wallet-provider";
+import api from "@/lib/api";
+import {
+  Contract,
+  rpc as SorobanRpc,
+  TransactionBuilder,
+  Networks,
+  BASE_FEE,
+  nativeToScVal,
+} from "@stellar/stellar-sdk";
+import { signTransaction } from "@stellar/freighter-api";
 
-// --- Types & Mock Data (Replace with real contract calls) ---
-type SubscriptionStatus = "Active" | "Paused" | "Cancelled";
+// --- Configuration ---
+const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "";
+const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || "https://soroban-testnet.stellar.org";
+const NETWORK = process.env.NEXT_PUBLIC_NETWORK || "TESTNET";
+
+// --- Types ---
+type SubscriptionStatus = "Active" | "Paused" | "Failed" | "Cancelled" | "Completed";
 
 interface Subscription {
   id: string;
   recipient: string;
   token: string;
   amount: number;
-  interval: string; // e.g., "Monthly"
-  nextExecution: number; // Unix timestamp
+  interval: string;
+  nextExecution: number;
   status: SubscriptionStatus;
+  paidCycles: number;
+  totalCycles: number;
 }
 
-// Mock fetching function
-const fetchSubscriptions = async (address: string): Promise<Subscription[]> => {
-  await new Promise((r) => setTimeout(r, 1000));
-  // Return empty array [] to test empty state
-  return [
-    {
-      id: "1",
-      recipient: "GABC...1234",
-      token: "USDC",
-      amount: 50.0,
-      interval: "Monthly",
-      nextExecution: Math.floor(Date.now() / 1000) + 86400 * 5,
-      status: "Active",
-    },
-    {
-      id: "2",
-      recipient: "GXYZ...9876",
-      token: "XLM",
-      amount: 100.0,
-      interval: "Weekly",
-      nextExecution: Math.floor(Date.now() / 1000) + 86400 * 2,
-      status: "Paused",
-    },
-    {
-      id: "3",
-      recipient: "GDEF...5678",
-      token: "USDC",
-      amount: 10.0,
-      interval: "Daily",
-      nextExecution: Math.floor(Date.now() / 1000) - 86400, // Past
-      status: "Cancelled",
-    },
-  ];
+// Map contract status (0-4) to readable status
+const statusMap: Record<number, SubscriptionStatus> = {
+  0: "Active",
+  1: "Paused",
+  2: "Failed",
+  3: "Cancelled",
+  4: "Completed",
 };
 
-// --- Action Handlers (Mock) ---
-const handlePause = async (id: string) => {
-  console.log(`Pausing ${id}...`);
-  // await contract.pause(id);
-};
-const handleResume = async (id: string) => {
-  console.log(`Resuming ${id}...`);
-  // await contract.resume(id);
-};
-const handleCancel = async (id: string) => {
-  console.log(`Cancelling ${id}...`);
-  // await contract.cancel(id);
+// Format interval seconds to readable string
+const formatInterval = (seconds: number): string => {
+  if (seconds >= 2592000) return "Monthly";
+  if (seconds >= 604800) return "Weekly";
+  if (seconds >= 86400) return `${Math.floor(seconds / 86400)} days`;
+  if (seconds >= 3600) return `${Math.floor(seconds / 3600)} hours`;
+  return `${Math.floor(seconds / 60)} mins`;
 };
 
 export default function DashboardPage() {
   const { address, isConnected } = useWallet();
   const [data, setData] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch real subscriptions from API/contract
+  const fetchSubscriptions = async () => {
+    if (!address) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log("Fetching subscriptions for:", address);
+      const response = await api.getPaymentsByUser(address, 0, 50);
+      console.log("API Response:", response);
+      
+      if (response.success && response.payments && response.payments.length > 0) {
+        const subscriptions: Subscription[] = response.payments.map((p: any) => {
+          // Handle status - backend returns string like "ACTIVE", "PAUSED", etc.
+          let status: SubscriptionStatus = "Active";
+          if (typeof p.status === "string") {
+            // Map backend string status to frontend format
+            const statusStrMap: Record<string, SubscriptionStatus> = {
+              "ACTIVE": "Active",
+              "PAUSED": "Paused", 
+              "FAILED": "Failed",
+              "CANCELLED": "Cancelled",
+              "COMPLETED": "Completed",
+            };
+            status = statusStrMap[p.status.toUpperCase()] || "Active";
+          } else if (typeof p.status === "number" || typeof p.statusCode === "number") {
+            const code = p.statusCode ?? p.status;
+            status = statusMap[code] || "Active";
+          }
+
+          return {
+            id: p.id.toString(),
+            recipient: p.recipient || p.payer || "Unknown",
+            token: "USDC",
+            amount: (p.amount || 0) / 10000000,
+            interval: p.intervalFormatted || formatInterval(p.interval || 0),
+            nextExecution: p.nextExecution || p.next_execution || 0,
+            status,
+            paidCycles: p.paidCycles || p.paid_cycles || 0,
+            totalCycles: p.totalCycles || p.total_cycles || 0,
+          };
+        });
+        console.log("Mapped subscriptions:", subscriptions);
+        setData(subscriptions);
+      } else {
+        console.log("No payments found or empty response");
+        setData([]);
+      }
+    } catch (err: any) {
+      console.error("Error fetching subscriptions:", err);
+      setError("Failed to load subscriptions. Is the backend running?");
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isConnected && address) {
-      setLoading(true);
-      fetchSubscriptions(address)
-        .then(setData)
-        .finally(() => setLoading(false));
+      fetchSubscriptions();
     } else {
       setLoading(false);
     }
   }, [isConnected, address]);
+
+  // --- Real Action Handlers ---
+  const executeContractAction = async (
+    paymentId: string,
+    action: "pause_payment" | "resume_payment" | "cancel_payment"
+  ) => {
+    if (!address) return;
+    
+    setActionLoading(paymentId);
+    
+    try {
+      const server = new SorobanRpc.Server(RPC_URL);
+      const contract = new Contract(CONTRACT_ID);
+      const account = await server.getAccount(address);
+
+      const transaction = new TransactionBuilder(account, {
+        fee: BASE_FEE,
+        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
+      })
+        .addOperation(
+          contract.call(
+            action,
+            nativeToScVal(BigInt(paymentId), { type: "u64" }),
+          )
+        )
+        .setTimeout(30)
+        .build();
+
+      // Simulate first
+      const simulated = await server.simulateTransaction(transaction);
+      if ("error" in simulated) {
+        throw new Error(`Simulation failed: ${simulated.error}`);
+      }
+
+      // Sign with Freighter
+      const signedResult = await signTransaction(transaction.toXDR(), {
+        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
+      });
+
+      let signedXdr = "";
+      if (typeof signedResult === "string") {
+        signedXdr = signedResult;
+      } else if ("signedTxXdr" in signedResult) {
+        signedXdr = (signedResult as any).signedTxXdr;
+      }
+
+      if (!signedXdr) {
+        throw new Error("Failed to sign transaction");
+      }
+
+      const signedTx = TransactionBuilder.fromXDR(
+        signedXdr,
+        Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET
+      );
+
+      await server.sendTransaction(signedTx);
+      
+      // Refresh data after successful action
+      setTimeout(fetchSubscriptions, 2000);
+      
+    } catch (err: any) {
+      console.error(`${action} failed:`, err);
+      alert(`Action failed: ${err.message}`);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handlePause = async (id: string) => {
+    await executeContractAction(id, "pause_payment");
+  };
+
+  const handleResume = async (id: string) => {
+    await executeContractAction(id, "resume_payment");
+  };
+
+  const handleCancel = async (id: string) => {
+    if (confirm("Are you sure you want to cancel this subscription? This action cannot be undone.")) {
+      await executeContractAction(id, "cancel_payment");
+    }
+  };
 
   if (!isConnected) {
     return (
@@ -142,12 +267,29 @@ export default function DashboardPage() {
             Manage your recurring crypto payments.
           </p>
         </div>
-        <Button asChild className="bg-indigo-600 hover:bg-indigo-700">
-          <Link href="/dashboard/create">
-            <Plus className="mr-2 h-4 w-4" /> Create New
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchSubscriptions}
+            disabled={loading}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+          <Button asChild className="bg-indigo-600 hover:bg-indigo-700">
+            <Link href="/create">
+              <Plus className="mr-2 h-4 w-4" /> Create New
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
+      )}
 
       <Card className="border-slate-200 shadow-sm">
         <CardHeader className="p-6 pb-2">
@@ -172,7 +314,7 @@ export default function DashboardPage() {
                 started.
               </p>
               <Button asChild variant="outline" className="mt-6">
-                <Link href="/dashboard/create">Create Subscription</Link>
+                <Link href="/create">Create Subscription</Link>
               </Button>
             </div>
           ) : (
@@ -203,14 +345,14 @@ export default function DashboardPage() {
                           #{sub.id}
                         </span>
                         <span className="text-xs text-slate-500 font-mono truncate max-w-[120px]">
-                          {sub.recipient}
+                          {sub.recipient.slice(0, 8)}...{sub.recipient.slice(-4)}
                         </span>
                       </div>
                     </TableCell>
 
                     {/* Amount */}
                     <TableCell className="font-medium text-slate-900">
-                      {sub.amount}{" "}
+                      {sub.amount.toFixed(2)}{" "}
                       <span className="text-slate-500 text-xs">
                         {sub.token}
                       </span>
@@ -223,19 +365,25 @@ export default function DashboardPage() {
 
                     {/* Next Execution Date */}
                     <TableCell className="text-slate-600">
-                      {format(
-                        new Date(sub.nextExecution * 1000),
-                        "MMM d, yyyy",
-                      )}
+                      {sub.status === "Active" && sub.nextExecution > 0
+                        ? format(new Date(sub.nextExecution * 1000), "MMM d, yyyy")
+                        : "-"}
                     </TableCell>
 
                     {/* Actions Dropdown */}
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button 
+                            variant="ghost" 
+                            className="h-8 w-8 p-0"
+                            disabled={actionLoading === sub.id}
+                          >
+                            {actionLoading === sub.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <MoreHorizontal className="h-4 w-4" />
+                            )}
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -246,6 +394,13 @@ export default function DashboardPage() {
                             }
                           >
                             Copy ID
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              navigator.clipboard.writeText(sub.recipient)
+                            }
+                          >
+                            Copy Recipient
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
 
@@ -265,12 +420,14 @@ export default function DashboardPage() {
                             </DropdownMenuItem>
                           )}
 
-                          <DropdownMenuItem
-                            onClick={() => handleCancel(sub.id)}
-                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" /> Cancel
-                          </DropdownMenuItem>
+                          {(sub.status === "Active" || sub.status === "Paused") && (
+                            <DropdownMenuItem
+                              onClick={() => handleCancel(sub.id)}
+                              className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Cancel
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -287,16 +444,20 @@ export default function DashboardPage() {
 
 // Helper Component for Status Badges
 function StatusBadge({ status }: { status: SubscriptionStatus }) {
-  const styles = {
+  const styles: Record<SubscriptionStatus, string> = {
     Active: "bg-emerald-50 text-emerald-700 border-emerald-200",
     Paused: "bg-amber-50 text-amber-700 border-amber-200",
+    Failed: "bg-red-50 text-red-700 border-red-200",
     Cancelled: "bg-slate-100 text-slate-700 border-slate-200",
+    Completed: "bg-blue-50 text-blue-700 border-blue-200",
   };
 
-  const dotStyles = {
+  const dotStyles: Record<SubscriptionStatus, string> = {
     Active: "bg-emerald-500",
     Paused: "bg-amber-500",
+    Failed: "bg-red-500",
     Cancelled: "bg-slate-400",
+    Completed: "bg-blue-500",
   };
 
   return (

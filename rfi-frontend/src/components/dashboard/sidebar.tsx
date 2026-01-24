@@ -14,7 +14,7 @@ import {
 const navigation = [
   { name: "Home", href: "/", icon: Home },
   { name: "Subscriptions", href: "/dashboard", icon: CreditCard },
-  { name: "Create Subscription", href: "/dashboard/create", icon: PlusCircle },
+  { name: "Create Subscription", href: "/create", icon: PlusCircle },
   { name: "Executor Status", href: "/admin/executor", icon: ShieldCheck },
 ];
 

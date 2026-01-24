@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Zap, Loader2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { useWallet } from "@/context/WalletContext";
+import { useWallet } from "@/context/wallet-provider";
 import api from "@/lib/api";
 
 interface Payment {
@@ -29,7 +29,7 @@ interface Payment {
 }
 
 export default function PaymentsPage() {
-  const { walletConnected, publicKey } = useWallet();
+  const { isConnected: walletConnected, address: publicKey } = useWallet();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [executeHover, setExecuteHover] = useState<string | null>(null);

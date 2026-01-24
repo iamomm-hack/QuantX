@@ -8,10 +8,10 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Bell, Lock, Palette, Zap } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { useWallet } from "@/context/WalletContext";
+import { useWallet } from "@/context/wallet-provider";
 
 export default function Settings() {
-  const { publicKey, walletConnected } = useWallet();
+  const { address: publicKey, isConnected: walletConnected } = useWallet();
 
   return (
     <div className="min-h-screen bg-background animate-in fade-in duration-500">

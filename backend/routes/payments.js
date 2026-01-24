@@ -24,6 +24,11 @@ router.get("/user/:address", async (req, res) => {
     const { address } = req.params;
     const { offset = 0, limit = 10 } = req.query;
 
+    console.log(
+      `[Payments] Fetching payments for ${address} (offset: ${offset}, limit: ${limit})`,
+    );
+    console.log(`[Payments] Using Contract ID: ${CONTRACT_ID}`);
+
     // Try to get real data from contract
     let payments;
     try {
@@ -32,11 +37,12 @@ router.get("/user/:address", async (req, res) => {
         parseInt(offset),
         parseInt(limit),
       );
-    } catch (contractError) {
-      console.error(
-        "Contract call failed, using fallback:",
-        contractError.message,
+      console.log(
+        `[Payments] Contract returned ${payments?.length || 0} payments:`,
+        payments,
       );
+    } catch (contractError) {
+      console.error("[Payments] Contract call failed:", contractError.message);
       // Fallback to empty array if contract call fails
       payments = [];
     }
@@ -56,6 +62,7 @@ router.get("/user/:address", async (req, res) => {
       limit: parseInt(limit),
     });
   } catch (error) {
+    console.error("[Payments] Error:", error);
     res.status(500).json({
       success: false,
       error: error.message,

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select";
 import { CheckCircle2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import { useWallet } from "@/context/WalletContext";
+import { useWallet } from "@/context/wallet-provider";
 import {
   Contract,
   rpc as SorobanRpc,
@@ -22,6 +22,7 @@ import {
   Networks,
   BASE_FEE,
   nativeToScVal,
+  StrKey,
 } from "@stellar/stellar-sdk";
 import { signTransaction } from "@stellar/freighter-api";
 import { useRouter } from "next/navigation";
@@ -34,7 +35,7 @@ const NETWORK = process.env.NEXT_PUBLIC_NETWORK || "TESTNET";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 export default function CreatePaymentPage() {
-  const { walletConnected, publicKey } = useWallet();
+  const { isConnected: walletConnected, address: publicKey } = useWallet();
   const router = useRouter();
 
   const [formStep, setFormStep] = useState<"form" | "confirmation">("form");
@@ -56,6 +57,13 @@ export default function CreatePaymentPage() {
     e.preventDefault();
     if (!walletConnected || !publicKey) {
       alert("Please connect your wallet first.");
+      return;
+    }
+
+    // Validate Stellar receiver address
+    const receiverAddress = formData.receiver.trim().toUpperCase();
+    if (!StrKey.isValidEd25519PublicKey(receiverAddress)) {
+      alert("Invalid Stellar address. Please enter a valid G... address (56 characters, uppercase).");
       return;
     }
 
@@ -96,10 +104,22 @@ export default function CreatePaymentPage() {
         .addOperation(
           contract.call(
             "create_payment",
-            nativeToScVal(formData.receiver, { type: "address" }),
-            nativeToScVal(amountBigInt, { type: "i128" }), // Usually amounts are i128
+            // 1. Payer (the connected wallet)
+            nativeToScVal(publicKey, { type: "address" }),
+            // 2. Recipient
+            nativeToScVal(receiverAddress, { type: "address" }),
+            // 3. Token address (you need to set a valid token contract address)
+            nativeToScVal(process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2EZ4YXL", { type: "address" }),
+            // 4. Amount
+            nativeToScVal(amountBigInt, { type: "i128" }),
+            // 5. Interval in seconds
             nativeToScVal(intervalSeconds, { type: "u64" }),
-            nativeToScVal(Math.floor(Date.now() / 1000), { type: "u64" }), // Start now for simplicity
+            // 6. SubscriptionType: AutoPay or Prepaid (passed as symbol)
+            nativeToScVal("AutoPay", { type: "symbol" }),
+            // 7. Total cycles (0 for unlimited in AutoPay mode)
+            nativeToScVal(BigInt(0), { type: "u64" }),
+            // 8. ChargeStart: Immediate or Delayed (passed as symbol)
+            nativeToScVal("Immediate", { type: "symbol" }),
           ),
         )
         .setTimeout(30)
@@ -247,7 +267,7 @@ export default function CreatePaymentPage() {
               </Label>
               <Select
                 value={formData.token}
-                onValueChange={(value) => handleInputChange("token", value)}
+                onValueChange={(value: string) => handleInputChange("token", value)}
               >
                 <SelectTrigger className="bg-secondary/20 border-border text-foreground">
                   <SelectValue />
@@ -285,7 +305,7 @@ export default function CreatePaymentPage() {
               </Label>
               <Select
                 value={formData.interval}
-                onValueChange={(value) => handleInputChange("interval", value)}
+                onValueChange={(value: string) => handleInputChange("interval", value)}
               >
                 <SelectTrigger className="bg-secondary/20 border-border text-foreground">
                   <SelectValue />
