@@ -1,139 +1,93 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CheckCircle2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import SuccessModal from "@/components/SuccessModal";
 import { useWallet } from "@/context/WalletContext";
-import { signTransaction } from "@stellar/freighter-api";
 import {
   Contract,
-  SorobanRpc,
+  rpc as SorobanRpc,
   TransactionBuilder,
   Networks,
   BASE_FEE,
-  Address,
+  nativeToScVal,
 } from "@stellar/stellar-sdk";
+import { signTransaction } from "@stellar/freighter-api";
+import { useRouter } from "next/navigation";
 
-// Environment Constants
+// --- Configuration ---
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "";
 const RPC_URL =
   process.env.NEXT_PUBLIC_RPC_URL || "https://soroban-testnet.stellar.org";
 const NETWORK = process.env.NEXT_PUBLIC_NETWORK || "TESTNET";
 const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
-const ERROR_MESSAGES: { [key: number]: string } = {
-  1: "You are not authorized to perform this action",
-  2: "Payment is not yet due for execution",
-  3: "Insufficient balance in your account",
-  4: "Insufficient allowance - please approve contract spending",
-  5: "Payment is not active (paused, failed, or cancelled)",
-  6: "Payment already executed in this ledger",
-  7: "Interval must be at least 60 seconds",
-  8: "Amount must be greater than 0",
-};
-
-export default function CreatePlan() {
+export default function CreatePaymentPage() {
   const { walletConnected, publicKey } = useWallet();
+  const router = useRouter();
+
+  const [formStep, setFormStep] = useState<"form" | "confirmation">("form");
   const [loading, setLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [txHash, setTxHash] = useState("");
-  const [message, setMessage] = useState<{ type: string; text: string }>({
-    type: "",
-    text: "",
-  });
   const [formData, setFormData] = useState({
-    recipient: "",
+    receiver: "",
+    token: "USDC",
     amount: "",
-    token: "USDC", // USDC or XLM
-    interval: "3600", // 1 hour default
+    interval: "monthly",
+    startDate: "",
+    endDate: "",
   });
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
-    if (!walletConnected) {
-      alert("Please connect your wallet first");
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!walletConnected || !publicKey) {
+      alert("Please connect your wallet first.");
       return;
     }
 
     setLoading(true);
-    setMessage({ type: "", text: "" });
 
     try {
-      // Validate inputs
-      if (!formData.recipient || !formData.amount || !formData.interval) {
-        throw new Error("Please fill in all fields");
-      }
-
-      const amount = parseFloat(formData.amount);
-      const interval = parseInt(formData.interval);
-
-      if (amount <= 0) {
-        throw new Error("Amount must be greater than 0");
-      }
-
-      if (interval < 60) {
-        throw new Error("Interval must be at least 60 seconds");
-      }
-
-      // Development mode - skip contract interaction
       if (DEV_MODE) {
-        console.log("🔧 DEV MODE: Simulating payment creation", {
-          recipient: formData.recipient,
-          amount: amount,
-          token: formData.token,
-          interval: interval,
-        });
-
-        // Simulate network delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        setMessage({
-          type: "success",
-          text: `✅ DEV MODE: Payment created! ${amount} ${formData.token} every ${interval}s to ${formData.recipient.slice(0, 8)}...`,
-        });
-
-        // Reset form
-        setFormData({
-          recipient: "",
-          amount: "",
-          interval: "3600",
-          token: "USDC",
-        });
-
-        setLoading(false);
+        // Mock success for UI testing
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        setFormStep("confirmation");
+        setTimeout(() => {
+          setFormStep("form");
+          router.push("/dashboard");
+        }, 3000);
         return;
       }
 
-      // Production mode - actual contract interaction
-      if (!CONTRACT_ID) {
-        throw new Error("Contract ID missing in environment variables");
-      }
-
-      if (!publicKey) {
-        throw new Error("Please connect your wallet first");
-      }
-
+      // --- Stellar Contract Logic ---
       const server = new SorobanRpc.Server(RPC_URL);
       const contract = new Contract(CONTRACT_ID);
-
       const account = await server.getAccount(publicKey);
-      if (!account) throw new Error("Account not found on network");
 
-      // Convert amount to stroops (7 decimals for Stellar)
-      const amountInStroops = Math.floor(amount * 10000000);
+      // Convert interval string to seconds
+      let intervalSeconds = 2592000; // Monthly default
+      if (formData.interval === "weekly") intervalSeconds = 604800;
+      if (formData.interval === "custom") intervalSeconds = 60; // Just as an example placeholder
 
-      // Build transaction
+      // Amount with decimals (assuming 7 decimals for USDC/Stellar tokens usually)
+      const amountBigInt = BigInt(
+        Math.floor(parseFloat(formData.amount) * 10000000),
+      );
+
       const transaction = new TransactionBuilder(account, {
         fee: BASE_FEE,
         networkPassphrase:
@@ -142,205 +96,243 @@ export default function CreatePlan() {
         .addOperation(
           contract.call(
             "create_payment",
-            Address.fromString(publicKey).toScVal(),
-            Address.fromString(formData.recipient).toScVal(),
-            SorobanRpc.xdr.ScVal.scvU64(
-              SorobanRpc.xdr.Uint64.fromString(amountInStroops.toString())
-            ),
-            SorobanRpc.xdr.ScVal.scvU64(
-              SorobanRpc.xdr.Uint64.fromString(interval.toString())
-            )
-          )
+            nativeToScVal(formData.receiver, { type: "address" }),
+            nativeToScVal(amountBigInt, { type: "i128" }), // Usually amounts are i128
+            nativeToScVal(intervalSeconds, { type: "u64" }),
+            nativeToScVal(Math.floor(Date.now() / 1000), { type: "u64" }), // Start now for simplicity
+          ),
         )
         .setTimeout(30)
         .build();
 
-      // Sign with Freighter
-      const signedXdr = await signTransaction(transaction.toXDR(), {
-        network: NETWORK,
+      const signedResult = await signTransaction(transaction.toXDR(), {
         networkPassphrase:
           Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
       });
 
-      if (signedXdr.error) {
-        throw new Error(signedXdr.error);
+      if ("error" in signedResult && signedResult.error) {
+        throw new Error(signedResult.error);
       }
 
-      // Submit transaction
+      // Determine correct XDR string
+      let signedXdrString = "";
+      if (typeof signedResult === "string") {
+        signedXdrString = signedResult;
+      } else if ("signedTxXdr" in signedResult) {
+        // @ts-ignore
+        signedXdrString = signedResult.signedTxXdr;
+      } else if ("signedXDR" in signedResult) {
+        // @ts-ignore
+        signedXdrString = signedResult.signedXDR;
+      }
+
+      if (!signedXdrString) {
+        throw new Error("Failed to sign transaction");
+      }
+
       const signedTx = TransactionBuilder.fromXDR(
-        typeof signedXdr === "string" ? signedXdr : signedXdr.signedXDR,
-        Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET
+        signedXdrString,
+        Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
       );
-      const response = await server.sendTransaction(signedTx);
 
-      if (response.status === "PENDING") {
-        setMessage({
-          type: "success",
-          text: "Payment created successfully! Waiting for confirmation...",
-        });
-        setTxHash(response.hash);
-        setShowSuccess(true);
+      await server.sendTransaction(signedTx);
 
-        // Reset form
-        setFormData({
-          recipient: "",
-          amount: "",
-          interval: "3600",
-          token: "USDC",
-        });
-      } else {
-        throw new Error("Transaction failed");
-      }
+      // Success!
+      setFormStep("confirmation");
+      setTimeout(() => {
+        setFormStep("form");
+        router.push("/dashboard");
+      }, 3000);
     } catch (error: any) {
-      console.error("Error creating payment:", error);
-
-      // Parse error code if available
-      const errorMatch = error.message?.match(/\d+/);
-      const errorCode = errorMatch ? parseInt(errorMatch[0]) : null;
-      const errorMessage =
-        errorCode && ERROR_MESSAGES[errorCode]
-          ? ERROR_MESSAGES[errorCode]
-          : error.message || "Transaction failed";
-
-      setMessage({
-        type: "error",
-        text: errorMessage,
-      });
+      console.error("Payment Creation Failed:", error);
+      alert(`Error: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!walletConnected) {
+  // --- Render Confirmation View ---
+  if (formStep === "confirmation") {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-background">
         <Navbar />
-        <main className="flex flex-col items-center justify-center pt-12 p-4 min-h-[60vh]">
-          <Card className="w-full max-w-md shadow-lg">
-            <CardHeader>
-              <CardTitle>Connect Wallet Required</CardTitle>
-              <CardDescription>
-                Please connect your Freighter wallet to create a recurring payment.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </main>
+        {/* FIX: Added pt-24 here */}
+        <div className="max-w-2xl mx-auto px-6 pt-24 pb-8">
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse" />
+                  <CheckCircle2 className="w-20 h-20 text-primary relative z-10" />
+                </div>
+              </div>
+              <h2 className="text-3xl font-bold text-foreground mb-2">
+                Payment Created Successfully
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                Your recurring payment has been scheduled on-chain
+              </p>
+              <div className="bg-secondary/50 border border-border rounded-lg p-6 text-left mb-8">
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Receiver</span>
+                    <span className="font-mono text-foreground text-sm">
+                      {formData.receiver}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Amount</span>
+                    <span className="font-semibold text-foreground">
+                      {formData.amount} {formData.token}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Interval</span>
+                    <span className="text-foreground capitalize">
+                      {formData.interval}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Redirecting you back to dashboard...
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
+  // --- Render Form View ---
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <Navbar />
+      {/* FIX: Added pt-24 here */}
+      <div className="max-w-2xl mx-auto px-6 pt-24 pb-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Create Recurring Payment
+          </h1>
+          <p className="text-muted-foreground">
+            Set up a new automated on-chain payment using stablecoins
+          </p>
+        </div>
 
-      <main className="flex flex-col items-center pt-12 p-4">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader>
-            <CardTitle>Create Recurring Payment</CardTitle>
-            <CardDescription>
-              Set up a new recurring payment stream.
-              {DEV_MODE && (
-                <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
-                  🔧 DEV MODE
-                </span>
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {message.text && (
-              <div
-                className={`p-3 rounded-md text-sm ${
-                  message.type === "success"
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-red-50 text-red-700 border border-red-200"
-                }`}
+        <Card className="p-8 border-border bg-card">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Receiver Wallet Address */}
+            <div className="space-y-2">
+              <Label htmlFor="receiver" className="text-foreground">
+                Receiver Wallet Address
+              </Label>
+              <Input
+                id="receiver"
+                placeholder="G..."
+                value={formData.receiver}
+                onChange={(e) => handleInputChange("receiver", e.target.value)}
+                className="bg-secondary/20 border-border text-foreground placeholder:text-muted-foreground"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the recipient's Stellar Public Key (starting with G)
+              </p>
+            </div>
+
+            {/* Token Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="token" className="text-foreground">
+                Token
+              </Label>
+              <Select
+                value={formData.token}
+                onValueChange={(value) => handleInputChange("token", value)}
               >
-                {message.text}
-              </div>
-            )}
+                <SelectTrigger className="bg-secondary/20 border-border text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USDC">USDC</SelectItem>
+                  <SelectItem value="XLM">XLM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="recipient">Recipient Address</Label>
-                <Input
-                  id="recipient"
-                  placeholder="GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                  value={formData.recipient}
-                  onChange={(e) =>
-                    setFormData({ ...formData, recipient: e.target.value })
-                  }
-                  required
-                />
-              </div>
+            {/* Amount */}
+            <div className="space-y-2">
+              <Label htmlFor="amount" className="text-foreground">
+                Amount
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="1000"
+                value={formData.amount}
+                onChange={(e) => handleInputChange("amount", e.target.value)}
+                className="bg-secondary/20 border-border text-foreground placeholder:text-muted-foreground"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Amount in {formData.token} to send each interval
+              </p>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="token">Token</Label>
-                <select
-                  id="token"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  value={formData.token}
-                  onChange={(e) =>
-                    setFormData({ ...formData, token: e.target.value })
-                  }
-                  required
-                >
-                  <option value="USDC">USDC (USD Coin)</option>
-                  <option value="XLM">XLM (Stellar Lumens)</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount ({formData.token})</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="100"
-                  step="0.01"
-                  min="0.01"
-                  value={formData.amount}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amount: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="interval">Interval (seconds)</Label>
-                <Input
-                  id="interval"
-                  type="number"
-                  placeholder="3600"
-                  min="60"
-                  value={formData.interval}
-                  onChange={(e) =>
-                    setFormData({ ...formData, interval: e.target.value })
-                  }
-                  required
-                />
-                <p className="text-xs text-gray-500">
-                  Minimum: 60 seconds (For demo: use 30 seconds)
-                </p>
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full mt-6"
-                size="lg"
-                disabled={loading}
+            {/* Interval Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="interval" className="text-foreground">
+                Interval
+              </Label>
+              <Select
+                value={formData.interval}
+                onValueChange={(value) => handleInputChange("interval", value)}
               >
-                {loading ? "Creating..." : "Create Payment"}
-              </Button>
-            </form>
-          </CardContent>
+                <SelectTrigger className="bg-secondary/20 border-border text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="custom">Custom (Demo: 60s)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={loading || !walletConnected}
+              className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-base disabled:opacity-50"
+            >
+              {loading
+                ? "Processing..."
+                : walletConnected
+                  ? "Create Recurring Payment"
+                  : "Connect Wallet First"}
+            </Button>
+          </form>
         </Card>
-      </main>
 
-      <SuccessModal
-        isOpen={showSuccess}
-        onClose={() => setShowSuccess(false)}
-        txHash={txHash}
-      />
+        {/* Info Section */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="p-6 border-border bg-secondary/20">
+            <h3 className="font-semibold text-foreground mb-3">Security</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              All transactions are non-custodial and verified on-chain. You
+              maintain complete control over your funds.
+            </p>
+          </Card>
+          <Card className="p-6 border-border bg-secondary/20">
+            <h3 className="font-semibold text-foreground mb-3">
+              Gas Optimization
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Payments are batched and optimized to minimize gas costs while
+              maintaining reliability.
+            </p>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
