@@ -9,6 +9,10 @@ const {
   Address,
 } = require("@stellar/stellar-sdk");
 
+// Import services
+const paymentService = require("../services/payment.service");
+const executorService = require("../services/executor.service");
+
 const router = express.Router();
 const RPC_URL = process.env.RPC_URL || "https://soroban-testnet.stellar.org";
 const CONTRACT_ID = process.env.CONTRACT_ID;
@@ -20,26 +24,34 @@ router.get("/user/:address", async (req, res) => {
     const { address } = req.params;
     const { offset = 0, limit = 10 } = req.query;
 
-    // In production, call contract's get_payments_by_payer
-    // For now, return mock data
+    // Try to get real data from contract
+    let payments;
+    try {
+      payments = await paymentService.getPaymentsByPayer(
+        address,
+        parseInt(offset),
+        parseInt(limit),
+      );
+    } catch (contractError) {
+      console.error(
+        "Contract call failed, using fallback:",
+        contractError.message,
+      );
+      // Fallback to empty array if contract call fails
+      payments = [];
+    }
 
-    const mockPayments = [
-      {
-        id: 1,
-        payer: address,
-        recipient: "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        amount: 100 * 10000000, // 100 USDC in stroops
-        interval: 3600,
-        next_execution: Math.floor(Date.now() / 1000) + 1800,
-        status: 0, // ACTIVE
-        created_at: Math.floor(Date.now() / 1000) - 86400,
-      },
-    ];
+    // Track payments for executor (auto-track on query)
+    payments.forEach((p) => {
+      if (p.status === "ACTIVE") {
+        executorService.trackPayment(p.id);
+      }
+    });
 
     res.json({
       success: true,
-      payments: mockPayments,
-      total: mockPayments.length,
+      payments,
+      total: payments.length,
       offset: parseInt(offset),
       limit: parseInt(limit),
     });
@@ -56,22 +68,28 @@ router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Mock payment data
-    const mockPayment = {
-      id: parseInt(id),
-      payer: "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-      recipient: "GYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY",
-      amount: 100 * 10000000,
-      interval: 3600,
-      next_execution: Math.floor(Date.now() / 1000) + 1800,
-      status: 0,
-      created_at: Math.floor(Date.now() / 1000) - 86400,
-      retry_count: 0,
-    };
+    // Get real payment from contract
+    let payment;
+    try {
+      payment = await paymentService.getPayment(parseInt(id));
+    } catch (contractError) {
+      console.error("Contract call failed:", contractError.message);
+      return res.status(404).json({
+        success: false,
+        error: "Payment not found",
+      });
+    }
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: "Payment not found",
+      });
+    }
 
     res.json({
       success: true,
-      payment: mockPayment,
+      payment,
     });
   } catch (error) {
     res.status(500).json({
@@ -86,18 +104,31 @@ router.get("/:id/status", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const statusMap = {
-      0: "ACTIVE",
-      1: "PAUSED",
-      2: "FAILED",
-      3: "CANCELLED",
-    };
+    // Get real payment status from contract
+    let payment;
+    try {
+      payment = await paymentService.getPayment(parseInt(id));
+    } catch (contractError) {
+      return res.status(404).json({
+        success: false,
+        error: "Payment not found",
+      });
+    }
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: "Payment not found",
+      });
+    }
 
     res.json({
       success: true,
-      paymentId: parseInt(id),
-      status: statusMap[0],
-      statusCode: 0,
+      paymentId: payment.id,
+      status: payment.status,
+      statusCode: payment.statusCode,
+      nextExecution: payment.nextExecution,
+      retryCount: payment.retryCount,
     });
   } catch (error) {
     res.status(500).json({
@@ -111,21 +142,15 @@ router.get("/:id/status", async (req, res) => {
 router.get("/:id/history", async (req, res) => {
   try {
     const { id } = req.params;
+    const db = require("../db");
 
-    // Mock execution history
-    const mockHistory = [
-      {
-        timestamp: Math.floor(Date.now() / 1000) - 3600,
-        status: "SUCCESS",
-        amount: 100 * 10000000,
-        hash: "abc123...",
-      },
-    ];
+    // Get execution history from local DB
+    const history = db.getExecutionHistory(50, parseInt(id));
 
     res.json({
       success: true,
       paymentId: parseInt(id),
-      history: mockHistory,
+      history,
     });
   } catch (error) {
     res.status(500).json({

@@ -1,13 +1,24 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
   reactStrictMode: true,
-  swcMinify: true,
-  // Disable Turbopack if needed (uncomment the line below)
-  // experimental: {
-  //   turbo: false,
-  // },
+  
+  // Empty turbopack config to silence the warning
+  turbopack: {},
+  
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Fixes for Stellar SDK in browser
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -61,6 +61,17 @@ function parseContractError(error) {
     6: "Payment already executed in this ledger",
     7: "Invalid interval: must be at least 60 seconds",
     8: "Invalid amount: must be greater than 0",
+    9: "Payment not found",
+    10: "Invalid total cycles for prepaid subscription",
+    11: "Cannot resume cancelled payment",
+    12: "Cannot resume completed payment",
+    13: "Payment already cancelled",
+    14: "Refund failed",
+    15: "Contract is paused",
+    16: "Not admin",
+    17: "Invalid token address",
+    18: "Rate limited - try again later",
+    19: "Batch too large - maximum 10 payments",
   };
 
   // Try to extract error code

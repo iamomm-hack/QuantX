@@ -38,11 +38,11 @@ class PaymentExecutor extends EventEmitter {
   }
 
   async start() {
-    console.log("🚀 QuantX Executor started");
-    console.log(`📡 RPC: ${RPC_URL}`);
-    console.log(`📝 Contract: ${CONTRACT_ID}`);
-    console.log(`👤 Executor: ${executorKeypair.publicKey()}`);
-    console.log(`⏱️  Check interval: ${CHECK_INTERVAL}ms\n`);
+    console.log("QuantX Executor started");
+    console.log(`RPC: ${RPC_URL}`);
+    console.log(`Contract: ${CONTRACT_ID}`);
+    console.log(`Executor: ${executorKeypair.publicKey()}`);
+    console.log(`Check interval: ${CHECK_INTERVAL}ms\n`);
 
     // Initial check
     await this.checkAndExecutePayments();
@@ -59,19 +59,17 @@ class PaymentExecutor extends EventEmitter {
       const timestamp = new Date().toISOString();
       this.stats.lastCheckTime = timestamp;
 
-      console.log(`[${timestamp}] 🔍 Checking for due payments...`);
+      console.log(`[${timestamp}] Checking for due payments...`);
 
       // Get active payments from contract
       const duePayments = await this.getDuePayments();
 
       if (duePayments.length === 0) {
-        console.log(`[${timestamp}] ✅ No payments due\n`);
+        console.log(`[${timestamp}] No payments due\n`);
         return;
       }
 
-      console.log(
-        `[${timestamp}] 📋 Found ${duePayments.length} due payment(s)`,
-      );
+      console.log(`[${timestamp}] Found ${duePayments.length} due payment(s)`);
 
       // Execute each due payment
       for (const payment of duePayments) {
@@ -80,7 +78,7 @@ class PaymentExecutor extends EventEmitter {
 
       console.log("");
     } catch (error) {
-      console.error("❌ Error in check cycle:", error.message);
+      console.error("Error in check cycle:", error.message);
       this.emit("error", error);
     }
   }
@@ -126,7 +124,7 @@ class PaymentExecutor extends EventEmitter {
     const paymentId = payment.id || payment;
 
     try {
-      console.log(`⚡ Executing payment ${paymentId}...`);
+      console.log(`Executing payment ${paymentId}...`);
 
       const account = await server.getAccount(executorKeypair.publicKey());
 
@@ -148,7 +146,7 @@ class PaymentExecutor extends EventEmitter {
         const result = await this.pollTransactionStatus(response.hash);
 
         if (result.status === "SUCCESS") {
-          console.log(`✅ Payment ${paymentId} executed successfully`);
+          console.log(`Payment ${paymentId} executed successfully`);
 
           this.stats.totalExecutions++;
           this.stats.successfulExecutions++;
@@ -167,7 +165,7 @@ class PaymentExecutor extends EventEmitter {
         throw new Error(`Unexpected response status: ${response.status}`);
       }
     } catch (error) {
-      console.error(`❌ Error executing payment ${paymentId}:`, error.message);
+      console.error(`Error executing payment ${paymentId}:`, error.message);
 
       this.stats.totalExecutions++;
       this.stats.failedExecutions++;
@@ -189,19 +187,19 @@ class PaymentExecutor extends EventEmitter {
     const errorMsg = error.message;
 
     if (errorMsg.includes("ERR_NOT_DUE")) {
-      console.log(`⏳ Payment ${paymentId} not yet due`);
+      console.log(`Payment ${paymentId} not yet due`);
     } else if (errorMsg.includes("ERR_INSUFFICIENT_BALANCE")) {
-      console.log(`💰 Payment ${paymentId} - insufficient balance`);
+      console.log(`Payment ${paymentId} - insufficient balance`);
       this.emit("insufficient_balance", { paymentId });
     } else if (errorMsg.includes("ERR_INSUFFICIENT_ALLOWANCE")) {
-      console.log(`🔒 Payment ${paymentId} - insufficient allowance`);
+      console.log(`Payment ${paymentId} - insufficient allowance`);
       this.emit("insufficient_allowance", { paymentId });
     } else if (errorMsg.includes("ERR_ALREADY_EXECUTED")) {
-      console.log(`🔄 Payment ${paymentId} already executed`);
+      console.log(`Payment ${paymentId} already executed`);
     } else if (errorMsg.includes("ERR_PAYMENT_INACTIVE")) {
-      console.log(`⏸️  Payment ${paymentId} is inactive`);
+      console.log(`Payment ${paymentId} is inactive`);
     } else {
-      console.log(`❓ Payment ${paymentId} - unknown error: ${errorMsg}`);
+      console.log(`Payment ${paymentId} - unknown error: ${errorMsg}`);
     }
   }
 
@@ -230,7 +228,7 @@ class PaymentExecutor extends EventEmitter {
           ).toFixed(2)
         : 0;
 
-    console.log("\n📊 Executor Statistics:");
+    console.log("\nExecutor Statistics:");
     console.log(`   Total executions: ${this.stats.totalExecutions}`);
     console.log(`   Successful: ${this.stats.successfulExecutions}`);
     console.log(`   Failed: ${this.stats.failedExecutions}`);
@@ -261,29 +259,27 @@ if (require.main === module) {
 
   // Event listeners
   executor.on("execution_success", (data) => {
-    console.log(`📢 Event: Payment ${data.paymentId} executed successfully`);
+    console.log(`Event: Payment ${data.paymentId} executed successfully`);
   });
 
   executor.on("execution_failed", (data) => {
-    console.log(`📢 Event: Payment ${data.paymentId} failed - ${data.error}`);
+    console.log(`Event: Payment ${data.paymentId} failed - ${data.error}`);
   });
 
   executor.on("insufficient_balance", (data) => {
-    console.log(
-      `📢 Event: Payment ${data.paymentId} - user needs to add funds`,
-    );
+    console.log(`Event: Payment ${data.paymentId} - user needs to add funds`);
     // In production: send notification to user
   });
 
   executor.on("insufficient_allowance", (data) => {
     console.log(
-      `📢 Event: Payment ${data.paymentId} - user needs to approve allowance`,
+      `Event: Payment ${data.paymentId} - user needs to approve allowance`,
     );
     // In production: send notification to user
   });
 
   executor.on("error", (error) => {
-    console.error("📢 Event: Executor error -", error.message);
+    console.error("Event: Executor error -", error.message);
   });
 
   // Start executor
@@ -291,13 +287,13 @@ if (require.main === module) {
 
   // Graceful shutdown
   process.on("SIGINT", () => {
-    console.log("\n👋 Shutting down executor...");
+    console.log("\nShutting down executor...");
     executor.logStats();
     process.exit(0);
   });
 
   process.on("SIGTERM", () => {
-    console.log("\n👋 Shutting down executor...");
+    console.log("\nShutting down executor...");
     executor.logStats();
     process.exit(0);
   });
