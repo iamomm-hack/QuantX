@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Contract, SorobanRpc, TransactionBuilder, Networks, BASE_FEE } from '@stellar/stellar-sdk';
+import { Contract, SorobanRpc, TransactionBuilder, Networks, BASE_FEE, Address } from '@stellar/stellar-sdk';
 import { signTransaction } from '@stellar/freighter-api';
 
 const CONTRACT_ID = import.meta.env.VITE_CONTRACT_ID || 'YOUR_CONTRACT_ID';
@@ -94,32 +94,55 @@ function PaymentForm({ publicKey }) {
       // Build transaction
       const account = await server.getAccount(publicKey);
       
+      // Import nativeToScVal for proper type conversion
+      const { nativeToScVal } = await import('@stellar/stellar-sdk');
+      
+      // Prepare contract call with proper parameter types
+      const params = [
+        new Address(publicKey).toScVal(), // payer address
+        new Address(formData.recipient).toScVal(), // recipient address
+        nativeToScVal(Math.floor(amount * 10000000), { type: 'i128' }), // amount in stroops
+        nativeToScVal(interval, { type: 'u64' }) // interval in seconds
+      ];
+
       const transaction = new TransactionBuilder(account, {
         fee: BASE_FEE,
         networkPassphrase: Networks.TESTNET,
       })
         .addOperation(
-          contract.call(
-            'create_payment',
-            publicKey,
-            formData.recipient,
-            Math.floor(amount * 10000000), // Convert to stroops
-            interval
-          )
+          contract.call('create_payment', ...params)
         )
         .setTimeout(30)
         .build();
 
+      // Simulate transaction first to check for errors
+      console.log('🔍 Simulating transaction...');
+      const simulated = await server.simulateTransaction(transaction);
+      
+      if (simulated.error) {
+        console.error('❌ Simulation error:', simulated.error);
+        throw new Error(`Simulation failed: ${simulated.error}`);
+      }
+      
+      console.log('✅ Simulation successful:', simulated);
+
+      // Use the prepared transaction from simulation (includes proper fees and footprint)
+      const preparedTransaction = SorobanRpc.assembleTransaction(transaction, simulated).build();
+
       // Sign with Freighter
-      const xdr = transaction.toXDR();
+      console.log('📝 Requesting signature from Freighter...');
+      const xdr = preparedTransaction.toXDR();
       const signedXdr = await signTransaction(xdr, {
         network: 'TESTNET',
         networkPassphrase: Networks.TESTNET,
       });
 
       // Submit transaction
+      console.log('📤 Submitting transaction...');
       const signedTx = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET);
       const response = await server.sendTransaction(signedTx);
+
+      console.log('📊 Transaction response:', response);
 
       if (response.status === 'PENDING') {
         setMessage({
@@ -134,7 +157,30 @@ function PaymentForm({ publicKey }) {
           interval: '3600',
           token: 'USDC',
         });
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setMessage({ type: '', text: '' });
+        }, 5000);
+      } else if (response.status === 'ERROR') {
+        console.error('❌ Transaction error:', response);
+        console.error('❌ Error result:', response.errorResult);
+        
+        // Try to decode the error
+        let errorMessage = 'Transaction failed';
+        if (response.errorResult) {
+          try {
+            const errorCode = response.errorResult.result?.value()?.value();
+            console.error('❌ Error code:', errorCode);
+            errorMessage = `Transaction failed: ${errorCode || 'Unknown error'}`;
+          } catch (e) {
+            console.error('Could not decode error:', e);
+          }
+        }
+        
+        throw new Error(errorMessage);
       } else {
+        console.error('❌ Unexpected response status:', response);
         throw new Error('Transaction failed');
       }
     } catch (error) {

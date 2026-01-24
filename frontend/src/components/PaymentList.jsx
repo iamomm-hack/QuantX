@@ -19,8 +19,9 @@ function PaymentList({ publicKey }) {
 
   useEffect(() => {
     loadPayments();
-    const interval = setInterval(loadPayments, 10000); // Refresh every 10 seconds
-    return () => clearInterval(interval);
+    // Disabled auto-refresh to prevent excessive contract calls
+    // const interval = setInterval(loadPayments, 10000);
+    // return () => clearInterval(interval);
   }, [publicKey]);
 
   const loadPayments = async () => {
@@ -60,26 +61,51 @@ function PaymentList({ publicKey }) {
       }
 
       // Production mode - fetch from contract
+      console.log('📡 Fetching payments from contract...');
       const server = new SorobanRpc.Server(RPC_URL);
       const contract = new Contract(CONTRACT_ID);
 
-      // In production, call get_payments_by_payer
-      const mockPayments = [
-        {
-          id: 1,
-          recipient: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-          amount: 100,
-          interval: 3600,
-          next_execution: Date.now() / 1000 + 1800,
-          status: 0,
-          created_at: Date.now() / 1000 - 86400,
-          token: 'USDC', // Token type: USDC or XLM
-        },
-      ];
+      try {
+        // Import Address for parameter conversion
+        const { Address, nativeToScVal } = await import('@stellar/stellar-sdk');
+        
+        // Build transaction to call get_payments_by_payer
+        const account = await server.getAccount(publicKey);
+        
+        const params = [
+          new Address(publicKey).toScVal(), // payer address
+          nativeToScVal(0, { type: 'u32' }), // offset
+          nativeToScVal(10, { type: 'u32' }) // limit
+        ];
 
-      setPayments(mockPayments);
+        const transaction = new TransactionBuilder(account, {
+          fee: BASE_FEE,
+          networkPassphrase: Networks.TESTNET,
+        })
+          .addOperation(contract.call('get_payments_by_payer', ...params))
+          .setTimeout(30)
+          .build();
+
+        // Simulate to get result
+        const simulated = await server.simulateTransaction(transaction);
+        
+        if (simulated.result) {
+          console.log('✅ Payments fetched:', simulated.result);
+          // Parse the result - this will be a Vec<Payment>
+          // For now, show empty until we implement proper parsing
+          setPayments([]);
+        } else {
+          console.log('ℹ️ No payments found or error:', simulated);
+          setPayments([]);
+        }
+      } catch (contractError) {
+        console.error('Error calling contract:', contractError);
+        // Fallback to empty array
+        setPayments([]);
+      }
     } catch (error) {
       console.error('Error loading payments:', error);
+      setPayments([]);
     } finally {
       setLoading(false);
     }
@@ -142,12 +168,17 @@ function PaymentList({ publicKey }) {
   };
 
   const formatInterval = (seconds) => {
-    if (seconds < 3600) {
-      return `${Math.floor(seconds / 60)} minutes`;
+    if (seconds < 60) {
+      return `${seconds} seconds`;
+    } else if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
     } else if (seconds < 86400) {
-      return `${Math.floor(seconds / 3600)} hours`;
+      const hours = Math.floor(seconds / 3600);
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
     } else {
-      return `${Math.floor(seconds / 86400)} days`;
+      const days = Math.floor(seconds / 86400);
+      return `${days} ${days === 1 ? 'day' : 'days'}`;
     }
   };
 
