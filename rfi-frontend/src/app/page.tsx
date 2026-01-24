@@ -36,7 +36,7 @@ export default function Home() {
 
       <div className="text-center space-y-6 max-w-2xl">
         <h1 className="text-6xl font-extrabold tracking-tight text-gray-900">
-          ⚡ QuantX
+          QuantX
         </h1>
         <p className="text-2xl text-gray-500">
           Recurring Finance Infrastructure. <br />
@@ -46,7 +46,7 @@ export default function Home() {
         </p>
         {process.env.NEXT_PUBLIC_DEV_MODE === "true" && (
           <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold">
-            🔧 DEV MODE
+            DEV MODE
           </span>
         )}
       </div>

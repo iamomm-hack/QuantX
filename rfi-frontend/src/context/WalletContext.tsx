@@ -26,7 +26,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [publicKey, setPublicKey] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ Auto-check wallet
+  // Auto-check wallet
   const checkWalletConnection = async () => {
     try {
       const connected = await isConnected();
@@ -54,7 +54,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     checkWalletConnection();
   }, []);
 
-  // ✅ Connect wallet
+  // Connect wallet
   const connectWallet = async () => {
     try {
       setLoading(true);
@@ -80,7 +80,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // ℹ️ Freighter has no hard disconnect
+  // Note: Freighter has no hard disconnect
   const disconnectWallet = () => {
     setWalletConnected(false);
     setPublicKey("");
@@ -102,7 +102,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// ✅ Hook
+// Hook
 export function useWallet() {
   const context = useContext(WalletContext);
   if (!context) {

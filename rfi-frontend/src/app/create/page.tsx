@@ -91,7 +91,7 @@ export default function CreatePlan() {
 
       // Development mode - skip contract interaction
       if (DEV_MODE) {
-        console.log("🔧 DEV MODE: Simulating payment creation", {
+        console.log("DEV MODE: Simulating payment creation", {
           recipient: formData.recipient,
           amount: amount,
           token: formData.token,
@@ -103,7 +103,7 @@ export default function CreatePlan() {
 
         setMessage({
           type: "success",
-          text: `✅ DEV MODE: Payment created! ${amount} ${formData.token} every ${interval}s to ${formData.recipient.slice(0, 8)}...`,
+          text: `DEV MODE: Payment created! ${amount} ${formData.token} every ${interval}s to ${formData.recipient.slice(0, 8)}...`,
         });
 
         // Reset form
@@ -258,7 +258,7 @@ export default function CreatePlan() {
               Set up a new recurring payment stream.
               {DEV_MODE && (
                 <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-semibold">
-                  🔧 DEV MODE
+                  DEV MODE
                 </span>
               )}
             </CardDescription>

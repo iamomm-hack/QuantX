@@ -72,7 +72,7 @@ export default function Dashboard() {
     try {
       // Development mode - use mock data
       if (DEV_MODE) {
-        console.log("🔧 DEV MODE: Using mock payment data");
+        console.log("DEV MODE: Using mock payment data");
 
         const mockPayments: Payment[] = [
           {
@@ -134,7 +134,7 @@ export default function Dashboard() {
 
     try {
       if (DEV_MODE) {
-        console.log(`🔧 DEV MODE: Simulating ${action} for payment ${paymentId}`);
+        console.log(`DEV MODE: Simulating ${action} for payment ${paymentId}`);
         await new Promise((resolve) => setTimeout(resolve, 1000));
         // Reload payments after action
         setTimeout(loadPayments, 500);

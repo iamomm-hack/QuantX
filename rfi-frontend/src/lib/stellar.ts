@@ -1,8 +1,3 @@
-/**
- * Stellar SDK Wrapper with Dynamic Import
- * Fixed for Stellar SDK v14 browser compatibility
- */
-
 let stellarSDK: any = null;
 
 export async function getStellarSDK() {
