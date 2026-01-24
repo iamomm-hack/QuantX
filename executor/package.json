@@ -1,0 +1,17 @@
+{
+  "name": "quantx-executor",
+  "version": "1.0.0",
+  "description": "Off-chain executor for QuantX recurring payments",
+  "main": "executor.js",
+  "scripts": {
+    "start": "node executor.js",
+    "dev": "nodemon executor.js"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^12.0.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}

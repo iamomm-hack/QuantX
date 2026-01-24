@@ -1,0 +1,25 @@
+{
+  "name": "quantx",
+  "version": "1.0.0",
+  "description": "Recurring Finance Infrastructure on Stellar",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "executor"
+  ],
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:executor": "cd executor && npm start",
+    "build:contract": "cd contracts/recurring_payment && cargo build --target wasm32-unknown-unknown --release",
+    "install:all": "npm install && cd frontend && npm install && cd ../executor && npm install"
+  },
+  "keywords": [
+    "stellar",
+    "soroban",
+    "recurring-payments",
+    "defi",
+    "web3"
+  ],
+  "author": "QuantX Team",
+  "license": "MIT"
+}
