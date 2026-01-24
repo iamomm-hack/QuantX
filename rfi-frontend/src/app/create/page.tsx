@@ -16,13 +16,16 @@ import SuccessModal from "@/components/SuccessModal";
 import { useWallet } from "@/context/WalletContext";
 import { signTransaction } from "@stellar/freighter-api";
 import {
-  Contract,
-  SorobanRpc,
-  TransactionBuilder,
-  Networks,
-  BASE_FEE,
-  Address,
-} from "@stellar/stellar-sdk";
+  createSorobanServer,
+  createContract,
+  getNetworks,
+  getBaseFee,
+  createAddress,
+  createTransactionBuilder,
+  nativeToScVal,
+  parseTransactionFromXDR,
+  prepareTransaction,
+} from "@/lib/stellar";
 
 // Environment Constants
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "";
@@ -124,8 +127,11 @@ export default function CreatePlan() {
         throw new Error("Please connect your wallet first");
       }
 
-      const server = new SorobanRpc.Server(RPC_URL);
-      const contract = new Contract(CONTRACT_ID);
+      // Use dynamic imports to avoid browser compatibility issues
+      const server = await createSorobanServer(RPC_URL);
+      const contract = await createContract(CONTRACT_ID);
+      const Networks = await getNetworks();
+      const BASE_FEE = await getBaseFee();
 
       const account = await server.getAccount(publicKey);
       if (!account) throw new Error("Account not found on network");
@@ -134,30 +140,37 @@ export default function CreatePlan() {
       const amountInStroops = Math.floor(amount * 10000000);
 
       // Build transaction
-      const transaction = new TransactionBuilder(account, {
+      const senderAddress = await createAddress(publicKey);
+      const recipientAddress = await createAddress(formData.recipient);
+      const amountScVal = await nativeToScVal(amountInStroops, { type: "i128" });
+      const intervalScVal = await nativeToScVal(interval, { type: "u64" });
+
+      const builder = await createTransactionBuilder(account, {
         fee: BASE_FEE,
         networkPassphrase:
           Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
-      })
+      });
+
+      const transaction = builder
         .addOperation(
           contract.call(
             "create_payment",
-            Address.fromString(publicKey).toScVal(),
-            Address.fromString(formData.recipient).toScVal(),
-            SorobanRpc.xdr.ScVal.scvU64(
-              SorobanRpc.xdr.Uint64.fromString(amountInStroops.toString())
-            ),
-            SorobanRpc.xdr.ScVal.scvU64(
-              SorobanRpc.xdr.Uint64.fromString(interval.toString())
-            )
+            senderAddress.toScVal(),
+            recipientAddress.toScVal(),
+            amountScVal,
+            intervalScVal
           )
         )
         .setTimeout(30)
         .build();
 
+      // Simulate and prepare the transaction (required for Soroban)
+      console.log("Simulating transaction...");
+      const preparedTx = await prepareTransaction(server, transaction);
+      console.log("Transaction prepared successfully");
+
       // Sign with Freighter
-      const signedXdr = await signTransaction(transaction.toXDR(), {
-        network: NETWORK,
+      const signedXdr = await signTransaction(preparedTx.toXDR(), {
         networkPassphrase:
           Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
       });
@@ -167,11 +180,13 @@ export default function CreatePlan() {
       }
 
       // Submit transaction
-      const signedTx = TransactionBuilder.fromXDR(
-        typeof signedXdr === "string" ? signedXdr : signedXdr.signedXDR,
+      const signedTx = await parseTransactionFromXDR(
+        typeof signedXdr === "string" ? signedXdr : signedXdr.signedTxXdr,
         Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET
       );
       const response = await server.sendTransaction(signedTx);
+
+      console.log("Transaction response:", response);
 
       if (response.status === "PENDING") {
         setMessage({
@@ -189,7 +204,9 @@ export default function CreatePlan() {
           token: "USDC",
         });
       } else {
-        throw new Error("Transaction failed");
+        console.error("Transaction failed with status:", response.status);
+        console.error("Full response:", JSON.stringify(response, null, 2));
+        throw new Error(`Transaction failed with status: ${response.status}`);
       }
     } catch (error: any) {
       console.error("Error creating payment:", error);

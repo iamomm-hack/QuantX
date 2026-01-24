@@ -17,12 +17,13 @@ import Navbar from "@/components/Navbar";
 import { useWallet } from "@/context/WalletContext";
 import api from "@/lib/api";
 import {
-  Contract,
-  SorobanRpc,
-  TransactionBuilder,
-  Networks,
-  BASE_FEE,
-} from "@stellar/stellar-sdk";
+  createSorobanServer,
+  createContract,
+  getNetworks,
+  getBaseFee,
+  createTransactionBuilder,
+  parseTransactionFromXDR,
+} from "@/lib/stellar";
 import { signTransaction } from "@stellar/freighter-api";
 
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "";
@@ -141,23 +142,26 @@ export default function Dashboard() {
         return;
       }
 
-      const server = new SorobanRpc.Server(RPC_URL);
-      const contract = new Contract(CONTRACT_ID);
+      const server = await createSorobanServer(RPC_URL);
+      const contract = await createContract(CONTRACT_ID);
+      const Networks = await getNetworks();
+      const BASE_FEE = await getBaseFee();
 
       const account = await server.getAccount(publicKey);
 
-      const transaction = new TransactionBuilder(account, {
+      const builder = await createTransactionBuilder(account, {
         fee: BASE_FEE,
         networkPassphrase:
           Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
-      })
+      });
+
+      const transaction = builder
         .addOperation(contract.call(action, paymentId))
         .setTimeout(30)
         .build();
 
       const xdr = transaction.toXDR();
       const signedXdr = await signTransaction(xdr, {
-        network: NETWORK,
         networkPassphrase:
           Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
       });
@@ -166,8 +170,8 @@ export default function Dashboard() {
         throw new Error(signedXdr.error);
       }
 
-      const signedTx = TransactionBuilder.fromXDR(
-        typeof signedXdr === "string" ? signedXdr : signedXdr.signedXDR,
+      const signedTx = await parseTransactionFromXDR(
+        typeof signedXdr === "string" ? signedXdr : signedXdr.signedTxXdr,
         Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET
       );
       await server.sendTransaction(signedTx);
