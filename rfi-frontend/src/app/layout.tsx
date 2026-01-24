@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Footer from "@/components/Footer";
-import { AuthProvider } from "@/context/FakeAuthContext"; // <--- Import is crucial
+import Providers from "@/components/Providers";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -25,11 +24,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen flex flex-col`}
       >
-        {/* The AuthProvider MUST wrap the content where useAuth is called */}
-        <AuthProvider>
-          <div className="flex-grow">{children}</div>
-          <Footer />
-        </AuthProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

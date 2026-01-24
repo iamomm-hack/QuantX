@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/FakeAuthContext"; // Ensure this path is correct
+import { useAuth } from "@/context/FakeAuthContext";
+import { useWallet } from "@/context/WalletContext";
 
 export default function Home() {
   const { user, logout } = useAuth();
+  const { walletConnected, publicKey, loading: walletLoading } = useWallet();
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24 gap-8 bg-slate-50 relative">
@@ -15,6 +17,11 @@ export default function Home() {
           <div className="flex flex-col text-right">
             <span className="text-sm font-bold text-gray-900">{user.name}</span>
             <span className="text-xs text-gray-500">{user.email}</span>
+            {walletConnected && publicKey && (
+              <span className="text-xs text-gray-400 font-mono">
+                {publicKey.slice(0, 4)}...{publicKey.slice(-4)}
+              </span>
+            )}
           </div>
           <Button
             variant="outline"
@@ -29,7 +36,7 @@ export default function Home() {
 
       <div className="text-center space-y-6 max-w-2xl">
         <h1 className="text-6xl font-extrabold tracking-tight text-gray-900">
-          RFI
+          ⚡ QuantX
         </h1>
         <p className="text-2xl text-gray-500">
           Recurring Finance Infrastructure. <br />
@@ -37,6 +44,11 @@ export default function Home() {
             Automated payroll and subscriptions on Stellar.
           </span>
         </p>
+        {process.env.NEXT_PUBLIC_DEV_MODE === "true" && (
+          <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm font-semibold">
+            🔧 DEV MODE
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col gap-4 items-center mt-8">
@@ -50,8 +62,18 @@ export default function Home() {
               Get Started →
             </Button>
           </Link>
+        ) : !walletConnected ? (
+          // IF LOGGED IN BUT WALLET NOT CONNECTED: Show wallet connection message
+          <div className="text-center space-y-4">
+            <p className="text-gray-600">
+              Please connect your Freighter wallet to continue
+            </p>
+            <p className="text-sm text-gray-500">
+              Click the "Connect Wallet" button in the navigation bar
+            </p>
+          </div>
         ) : (
-          // IF LOGGED IN: Show Dashboard & Create buttons
+          // IF LOGGED IN AND WALLET CONNECTED: Show Dashboard & Create buttons
           <div className="flex gap-4 animate-in fade-in zoom-in duration-500">
             <Link href="/dashboard">
               <Button variant="secondary" size="lg" className="px-8 shadow-sm">

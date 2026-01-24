@@ -4,14 +4,15 @@
   "description": "Recurring Finance Infrastructure on Stellar",
   "private": true,
   "workspaces": [
-    "frontend",
+    "rfi-frontend",
     "executor"
   ],
   "scripts": {
-    "dev:frontend": "cd frontend && npm run dev",
+    "dev:frontend": "cd rfi-frontend && npm run dev",
+    "dev:backend": "cd backend && npm start",
     "dev:executor": "cd executor && npm start",
     "build:contract": "cd contracts/recurring_payment && cargo build --target wasm32-unknown-unknown --release",
-    "install:all": "npm install && cd frontend && npm install && cd ../executor && npm install"
+    "install:all": "npm install && cd rfi-frontend && npm install && cd ../backend && npm install && cd ../executor && npm install"
   },
   "keywords": [
     "stellar",

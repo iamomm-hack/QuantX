@@ -1,11 +1,13 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 class QuantXAPI {
-  constructor(baseUrl = API_BASE_URL) {
+  private baseUrl: string;
+
+  constructor(baseUrl: string = API_BASE_URL) {
     this.baseUrl = baseUrl;
   }
 
-  async request(endpoint, options = {}) {
+  private async request(endpoint: string, options: RequestInit = {}) {
     const url = `${this.baseUrl}${endpoint}`;
 
     try {
@@ -36,24 +38,24 @@ class QuantXAPI {
   }
 
   // Get payments for a user
-  async getPaymentsByUser(address, offset = 0, limit = 10) {
+  async getPaymentsByUser(address: string, offset: number = 0, limit: number = 10) {
     return this.request(
       `/api/payments/user/${address}?offset=${offset}&limit=${limit}`,
     );
   }
 
   // Get single payment
-  async getPayment(paymentId) {
+  async getPayment(paymentId: number) {
     return this.request(`/api/payments/${paymentId}`);
   }
 
   // Get payment status
-  async getPaymentStatus(paymentId) {
+  async getPaymentStatus(paymentId: number) {
     return this.request(`/api/payments/${paymentId}/status`);
   }
 
   // Get payment execution history
-  async getPaymentHistory(paymentId) {
+  async getPaymentHistory(paymentId: number) {
     return this.request(`/api/payments/${paymentId}/history`);
   }
 
@@ -68,7 +70,7 @@ class QuantXAPI {
   }
 
   // Manual trigger execution (for testing)
-  async triggerExecution(paymentId) {
+  async triggerExecution(paymentId: number) {
     return this.request(`/api/executor/trigger/${paymentId}`, {
       method: "POST",
     });
@@ -76,3 +78,4 @@ class QuantXAPI {
 }
 
 export default new QuantXAPI();
+
