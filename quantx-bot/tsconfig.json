@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    // --- 1. Basic Setup ---
+    "target": "ES2020",                          // Good for modern Node.js
+    "module": "commonjs",                        // Easiest setting for Node apps/bots
+    "moduleResolution": "node",                  // Standard Node resolution
+    "esModuleInterop": true,                     // Allows 'import' with CommonJS libraries
+    "skipLibCheck": true,                        // Ignores errors in library definition files
+    "forceConsistentCasingInFileNames": true,    // Prevents casing issues on Windows/Linux
+
+    // --- 2. Input/Output ---
+    "rootDir": "./",                             // Root of your source files
+    "outDir": "./dist",                          // Where compiled JS goes (if you compile)
+    
+    // --- 3. Strictness (Optional but good) ---
+    "strict": true,                              // Enforce type safety
+    "noImplicitAny": false,                      // Allow 'any' type (useful for rapid prototyping)
+    
+    // --- 4. Compatibility ---
+    "resolveJsonModule": true                    // Allows importing .json files if needed
+  },
+  "include": ["**/*.ts"],                        // Compile all TS files
+  "exclude": ["node_modules"]                    // Ignore node_modules
+}

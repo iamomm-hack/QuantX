@@ -1,5 +1,5 @@
 // main.ts
-import { QuantXClient } from "quantx-sdk";
+import { QuantXClient } from "../quantx-sdk";
 import * as dotenv from "dotenv";
 import { Keypair } from "@stellar/stellar-sdk";
 
