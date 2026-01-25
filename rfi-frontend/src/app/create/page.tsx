@@ -116,7 +116,13 @@ export default function CreatePaymentPage() {
       if (paymentTx.status !== "SUCCESS") {
            throw new Error(`Payment creation failed: ${paymentTx.error}`);
       }
-      console.log("Payment confirmed:", paymentTx.hash);
+      
+      if (paymentTx.error) {
+          console.warn("Payment Warning:", paymentTx.error);
+          alert("Transaction sent but confirmation timed out. Please check the explorer.");
+      } else {
+          console.log("Payment confirmed:", paymentTx.hash);
+      }
 
       // Success!
       setFormStep("confirmation");

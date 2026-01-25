@@ -147,9 +147,63 @@ function parseTransactionError(error) {
   return errorStr;
 }
 
+/**
+ * Create Address ScVal
+ */
+function addressToScVal(address) {
+  return Address.fromString(address).toScVal();
+}
+
+/**
+ * Call a read-only contract function
+ * Restored for backward compatibility with executor/payment services
+ */
+async function callContractRead(functionName, ...args) {
+  // Use independent server/contract connection to avoid relying on private Client props
+  const server = new SorobanRpc.Server(sorobanConfig.rpcUrl);
+  const contract = new (require("@stellar/stellar-sdk").Contract)(
+    sorobanConfig.contractId,
+  );
+  const {
+    TransactionBuilder,
+    BASE_FEE,
+    Keypair,
+    Account,
+    TimeoutInfinite,
+  } = require("@stellar/stellar-sdk");
+
+  // Use a random key for read-only simulation to avoid nonce issues
+  const dummyKey = Keypair.random();
+  const source = new Account(dummyKey.publicKey(), "0");
+
+  const tx = new TransactionBuilder(source, {
+    fee: BASE_FEE,
+    networkPassphrase:
+      sorobanConfig.networkPassphrase === Networks.PUBLIC
+        ? Networks.PUBLIC
+        : Networks.TESTNET,
+  })
+    .addOperation(contract.call(functionName, ...args))
+    .setTimeout(TimeoutInfinite)
+    .build();
+
+  const sim = await server.simulateTransaction(tx);
+
+  if (SorobanRpc.Api.isSimulationError(sim)) {
+    throw new Error(`Read Failed (${functionName}): ${sim.error}`);
+  }
+
+  if (sim.result && sim.result.retval) {
+    return parseScVal(sim.result.retval);
+  }
+  return null;
+}
+
 module.exports = {
   getClient,
   callContractWrite,
+  callContractRead,
+  addressToScVal,
   parseScVal,
   toScVal,
   parseTransactionError,

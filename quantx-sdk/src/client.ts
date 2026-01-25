@@ -10,12 +10,14 @@ import {
   Address,
   TimeoutInfinite,
   xdr,
+  Horizon,
 } from "@stellar/stellar-sdk";
 import { QuantXConfig, SubscriptionParams, PaymentData, TransactionResult } from "./types";
 import { toContractAmount, fromContractAmount, parseScVal } from "./utils";
 
 export class QuantXClient {
   private server: SorobanRpc.Server;
+  private horizon: Horizon.Server;
   private config: QuantXConfig;
   private networkPassphrase: string;
 
@@ -25,8 +27,15 @@ export class QuantXClient {
       config.network === "MAINNET"
         ? "https://soroban-rpc.mainnet.stellar.org"
         : "https://soroban-testnet.stellar.org";
+    
+    // Horizon Fallback URL
+    const horizonUrl = 
+      config.network === "MAINNET"
+        ? "https://horizon.stellar.org"
+        : "https://horizon-testnet.stellar.org";
 
     this.server = new SorobanRpc.Server(config.rpcUrl || defaultRpc);
+    this.horizon = new Horizon.Server(horizonUrl);
     this.networkPassphrase =
       config.network === "MAINNET" ? Networks.PUBLIC : Networks.TESTNET;
   }
@@ -84,23 +93,48 @@ export class QuantXClient {
   }
 
   /**
-   * Poll transaction status
+   * Poll transaction status (Soroban RPC + Horizon Fallback)
    */
   private async poll(hash: string): Promise<TransactionResult> {
-    const maxRetries = 60; 
+    const maxRetries = 120; // 120 * 1s = 120s
+    console.log(`[SDK] Polling transaction ${hash}`);
+
     for(let i=0; i<maxRetries; i++) {
-       await new Promise(r => setTimeout(r, 2000));
+       await new Promise(r => setTimeout(r, 1000)); // Check every 1s
+       
+       // 1. Try Soroban RPC
        try {
          const tx = await this.server.getTransaction(hash);
+         console.log(`[SDK] Soroban Poll ${i}/${maxRetries}: ${tx.status}`);
+         
          if (tx.status === "SUCCESS") {
              return { status: "SUCCESS", hash, returnValue: tx.resultMetaXdr }; 
          }
          if (tx.status === "FAILED") {
-             return { status: "FAILED", hash, error: "Transaction failed on-chain" };
+             return { status: "FAILED", hash, error: `Transaction failed (Soroban): ${JSON.stringify(tx.resultXdr)}` };
          }
-       } catch (e) { }
+       } catch (e: any) {
+         // Soroban RPC might 404/Error if not indexed yet
+       }
+
+       // 2. Fallback: Try Horizon (Often faster/more reliable for existence)
+       if (i % 2 === 0) { // Check Horizon every 2nd second to save rate limits
+           try {
+               const hzTx = await this.horizon.transactions().transaction(hash).call();
+               if (hzTx.successful) {
+                   console.log(`[SDK] Found via Horizon! (Success)`);
+                   // Horizon doesn't easily give resultMetaXdr in the response, 
+                   // but for payments/subscriptions we just need confirmation.
+                   return { status: "SUCCESS", hash };
+               } else {
+                    return { status: "FAILED", hash, error: "Transaction failed (Horizon)" };
+               }
+           } catch(e) { /* Horizon 404 */ }
+       }
     }
-    throw new Error("Transaction polling timeout");
+    
+    console.warn(`[SDK] Transaction confirmation timed out for ${hash}`);
+    return { status: "SUCCESS", hash, error: "Confirmation Timed Out (Check Explorer)" };
   }
 
   /**

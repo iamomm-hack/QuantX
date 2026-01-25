@@ -1,5 +1,5 @@
 import { useWallet } from "@/context/wallet-provider";
-import { QuantXClient } from "quantx-sdk";
+import { QuantXClient } from "../../../quantx-sdk"; // Check if path is correct for you
 import { signTransaction } from "@stellar/freighter-api";
 import { useEffect, useState } from "react";
 
@@ -17,20 +17,29 @@ export function useQuantX() {
         network: NETWORK,
         contractId: CONTRACT_ID,
         rpcUrl: RPC_URL,
-        publicKey: address,
-        signTransaction: async (xdr: string) => {
-          const result = await signTransaction(xdr, {
-             networkPassphrase: NETWORK === "MAINNET" ? "Public Global Stellar Network ; September 2015" : "Test SDF Network ; September 2015"
-          });
-          
-          if(!result) throw new Error("User rejected signature");
-          
-          // Freighter returns object { signedTxXdr } or string
-          if (typeof result === "string") return result;
-          if ("signedTxXdr" in result) return result.signedTxXdr;
-          
-          throw new Error("Invalid signature response from wallet");
+        
+        // ---------------------------------------------------------
+        // FIX: Move keys inside the 'wallet' object
+        // ---------------------------------------------------------
+        wallet: {
+          publicKey: address,
+          signTransaction: async (xdr: string) => {
+            const result = await signTransaction(xdr, {
+               networkPassphrase: NETWORK === "MAINNET" 
+                 ? "Public Global Stellar Network ; September 2015" 
+                 : "Test SDF Network ; September 2015"
+            });
+            
+            if(!result) throw new Error("User rejected signature");
+            
+            // Freighter returns object { signedTxXdr } or string
+            if (typeof result === "string") return result;
+            if ("signedTxXdr" in result) return result.signedTxXdr;
+            
+            throw new Error("Invalid signature response from wallet");
+          }
         }
+        // ---------------------------------------------------------
       });
       setClient(c);
     } else {
