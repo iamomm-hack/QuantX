@@ -2,8 +2,9 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
-// Import config and scheduler
+// Import config, db, scheduler
 const { env, validateEnv, isExecutorConfigured } = require("./config/env");
+const db = require("./db");
 const scheduler = require("./jobs/scheduler.job");
 
 const app = express();
@@ -43,14 +44,11 @@ const executorRouter = require("./routes/executor");
 app.use("/api/payments", paymentsRouter);
 app.use("/api/executor", executorRouter);
 
-// Webhook endpoint for notifications (optional)
+// Webhook endpoint
 app.post("/api/webhook", (req, res) => {
-  const { event, paymentId, data } = req.body;
+  const { event, paymentId } = req.body;
 
   console.log(`Webhook received: ${event} for payment ${paymentId}`);
-
-  // In production, send notifications (email, SMS, etc.)
-  // For now, just log
 
   res.json({
     success: true,
@@ -71,45 +69,56 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================
-// START SERVER
+// START SERVER (DB → SERVER → SCHEDULER)
 // ============================================
 
-app.listen(PORT, () => {
-  console.log("========================================");
-  console.log("   QuantX API Server Started");
-  console.log("========================================");
-  console.log(`Port: ${PORT}`);
-  console.log(`RPC: ${RPC_URL}`);
-  console.log(`Contract: ${CONTRACT_ID}`);
-  console.log(`Executor Configured: ${isExecutorConfigured()}`);
-  console.log("");
-  console.log("Endpoints:");
-  console.log("   GET  /health");
-  console.log("   GET  /api/payments/user/:address");
-  console.log("   GET  /api/payments/:id");
-  console.log("   GET  /api/payments/:id/status");
-  console.log("   GET  /api/payments/:id/history");
-  console.log("   GET  /api/executor/stats");
-  console.log("   GET  /api/executor/history");
-  console.log("   GET  /api/executor/tracked");
-  console.log("   POST /api/executor/trigger/:paymentId");
-  console.log("   POST /api/executor/run");
-  console.log("   POST /api/executor/scheduler/start");
-  console.log("   POST /api/executor/scheduler/stop");
-  console.log("   GET  /api/executor/scheduler/status");
-  console.log("   POST /api/webhook");
-  console.log("========================================");
+async function startServer() {
+  try {
+    // 1️⃣ Connect MongoDB
+    await db.init();
 
-  // Auto-start scheduler if executor is configured
-  if (isExecutorConfigured()) {
-    console.log("[Server] Executor configured. Starting scheduler...");
-    scheduler.start();
-  } else {
-    console.log("[Server] Executor not configured. Scheduler not started.");
-    console.log(
-      "[Server] Set CONTRACT_ID and EXECUTOR_SECRET to enable auto-execution.",
-    );
+    // 2️⃣ Start HTTP server
+    app.listen(PORT, () => {
+      console.log("========================================");
+      console.log("   QuantX API Server Started");
+      console.log("========================================");
+      console.log(`Port: ${PORT}`);
+      console.log(`RPC: ${RPC_URL}`);
+      console.log(`Contract: ${CONTRACT_ID}`);
+      console.log(`Executor Configured: ${isExecutorConfigured()}`);
+      console.log("");
+      console.log("Endpoints:");
+      console.log("   GET  /health");
+      console.log("   GET  /api/payments/user/:address");
+      console.log("   GET  /api/payments/:id");
+      console.log("   GET  /api/payments/:id/status");
+      console.log("   GET  /api/payments/:id/history");
+      console.log("   GET  /api/executor/stats");
+      console.log("   GET  /api/executor/history");
+      console.log("   GET  /api/executor/tracked");
+      console.log("   POST /api/executor/trigger/:paymentId");
+      console.log("   POST /api/executor/run");
+      console.log("   POST /api/executor/scheduler/start");
+      console.log("   GET  /api/executor/scheduler/status");
+      console.log("   POST /api/webhook");
+      console.log("========================================");
+
+      // 3️⃣ Start scheduler only after DB + server
+      if (isExecutorConfigured()) {
+        console.log("[Server] Executor configured. Starting scheduler...");
+        scheduler.start();
+      } else {
+        console.log(
+          "[Server] Executor not configured. Scheduler not started.",
+        );
+      }
+    });
+  } catch (err) {
+    console.error("[Server] Failed to start:", err.message);
+    process.exit(1);
   }
-});
+}
+
+startServer();
 
 module.exports = app;

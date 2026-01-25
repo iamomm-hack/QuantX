@@ -13,7 +13,7 @@ router.get("/stats", async (req, res) => {
     const serviceStats = executorService.getStats();
 
     // Get 24h execution stats from DB
-    const dbStats = db.getStats24h();
+    const dbStats = await db.getStats24h();
 
     // Get contract stats
     let contractStats = null;
@@ -47,12 +47,12 @@ router.get("/stats", async (req, res) => {
 });
 
 // Get execution history
-router.get("/history", (req, res) => {
+router.get("/history", async (req, res) => {
   try {
     const { limit = 50, payment_id } = req.query;
 
     const paymentId = payment_id ? parseInt(payment_id) : null;
-    const history = db.getExecutionHistory(parseInt(limit), paymentId);
+    const history = await db.getExecutionHistory(parseInt(limit), paymentId);
 
     res.json({
       success: true,
@@ -68,9 +68,9 @@ router.get("/history", (req, res) => {
 });
 
 // Get tracked payments
-router.get("/tracked", (req, res) => {
+router.get("/tracked", async (req, res) => {
   try {
-    const payments = db.getPayments();
+    const payments = await db.getPayments();
 
     res.json({
       success: true,

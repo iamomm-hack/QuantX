@@ -42,7 +42,7 @@ export default function RootLayout({
               {/* Left Sidebar - Decorative */}
               <aside className="col-sidebar">
                 <span className="txt-small tracking-[0.5em]">
-                  Est. 2025 // Constructivist Design System
+                  Est. 2026 // QuantX Design System
                 </span>
               </aside>
 

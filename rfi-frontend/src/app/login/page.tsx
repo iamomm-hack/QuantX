@@ -34,17 +34,17 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm shadow-xl">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Sign in to RFI
+            Sign in to QuantX
           </CardTitle>
           <CardDescription className="text-center">
-            Enter your name to access the demo dashboard
+            Enter your name to access the dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Input
-                placeholder="Ex: Alice"
+                placeholder="Ex: Om"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -55,7 +55,7 @@ export default function LoginPage() {
               type="submit"
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Continue with Email"}
+              {isLoading ? "Signing in..." : "Continue"}
             </Button>
             <div className="text-center text-xs text-gray-500 mt-4">
               <Link href="/" className="hover:underline">

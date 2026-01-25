@@ -1,6 +1,6 @@
 const express = require("express");
 const {
-  SorobanRpc,
+  rpc: SorobanRpc,
   Contract,
   Keypair,
   TransactionBuilder,
@@ -152,7 +152,7 @@ router.get("/:id/history", async (req, res) => {
     const db = require("../db");
 
     // Get execution history from local DB
-    const history = db.getExecutionHistory(50, parseInt(id));
+    const history = await db.getExecutionHistory(50, parseInt(id));
 
     res.json({
       success: true,

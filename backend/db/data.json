@@ -1,5 +1,487 @@
 {
-  "payments": [],
-  "executions": [],
-  "lastUpdated": null
+  "payments": [
+    {
+      "payment_id": 6,
+      "status": "ACTIVE",
+      "last_checked": "2026-01-24T22:57:55.944Z",
+      "failures": 34,
+      "last_execution_ledger": 0,
+      "created_at": "2026-01-24T22:39:46.899Z"
+    },
+    {
+      "payment_id": 7,
+      "status": "ACTIVE",
+      "last_checked": "2026-01-24T22:57:57.889Z",
+      "failures": 29,
+      "last_execution_ledger": 0,
+      "created_at": "2026-01-24T22:44:02.503Z"
+    },
+    {
+      "payment_id": 1,
+      "status": "ACTIVE",
+      "last_checked": "2026-01-24T23:13:51.893Z",
+      "failures": 1,
+      "last_execution_ledger": 0,
+      "created_at": "2026-01-24T23:12:28.875Z"
+    },
+    {
+      "payment_id": 2,
+      "status": "ACTIVE",
+      "last_checked": null,
+      "failures": 0,
+      "last_execution_ledger": 0,
+      "created_at": "2026-01-24T23:13:12.453Z"
+    }
+  ],
+  "executions": [
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:39:57.652Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:40:27.702Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:40:57.649Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:43:05.351Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:43:35.150Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:44:05.051Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:44:06.624Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:44:35.158Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:44:36.897Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:45:05.059Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:45:06.424Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:45:35.472Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:45:37.025Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:46:04.876Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:46:06.059Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:46:35.018Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:46:36.406Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:47:05.789Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:47:07.531Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:47:34.996Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:47:36.614Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:48:05.504Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:48:06.783Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:48:35.494Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:48:37.441Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:48:55.862Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:48:57.925Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:49:25.601Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:49:27.311Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:49:55.804Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:49:57.622Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:50:25.509Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:50:27.024Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:50:55.294Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:50:56.701Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:51:25.791Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:51:27.127Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:51:55.692Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:51:57.228Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:52:26.002Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:52:27.446Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:52:55.435Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:52:57.031Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:53:25.839Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:53:27.274Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:53:56.039Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:53:57.864Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:54:25.222Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:54:26.455Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:54:55.511Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:54:57.046Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:55:25.407Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:55:26.652Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:55:56.030Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:55:57.671Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:56:25.348Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:56:26.654Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:56:55.936Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:56:58.610Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:57:26.042Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:57:27.443Z"
+    },
+    {
+      "payment_id": 6,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:57:55.944Z"
+    },
+    {
+      "payment_id": 7,
+      "success": false,
+      "hash": null,
+      "error": "Already cancelled",
+      "timestamp": "2026-01-24T22:57:57.889Z"
+    },
+    {
+      "payment_id": 1,
+      "success": false,
+      "hash": null,
+      "error": "Transaction polling timeout",
+      "timestamp": "2026-01-24T23:13:51.893Z"
+    }
+  ],
+  "lastUpdated": "2026-01-24T23:13:51.893Z"
 }

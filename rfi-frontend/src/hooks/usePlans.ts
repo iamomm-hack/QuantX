@@ -3,6 +3,7 @@ import {
   Contract,
   rpc as SorobanRpc,
   nativeToScVal,
+  TransactionBuilder,
 } from '@stellar/stellar-sdk';
 
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || '';
@@ -27,7 +28,7 @@ export function usePlans() {
       const contract = new Contract(CONTRACT_ID);
 
       const result = await server.simulateTransaction(
-        new SorobanRpc.TransactionBuilder(
+        new TransactionBuilder(
           await server.getAccount('GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF'),
           { fee: '100', networkPassphrase: 'Test SDF Network ; September 2015' }
         )

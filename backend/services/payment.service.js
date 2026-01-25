@@ -37,6 +37,7 @@ async function getPayment(paymentId) {
       return null;
     }
 
+    // console.log("Raw payment data from contract:", result);
     return formatPayment(result);
   } catch (error) {
     console.error(`Error fetching payment ${paymentId}:`, error.message);
@@ -64,6 +65,7 @@ async function getPaymentsByPayer(payerAddress, offset = 0, limit = 10) {
       return [];
     }
 
+    // console.log("Raw payments list from contract:", result);
     return result.map(formatPayment);
   } catch (error) {
     console.error(
@@ -117,10 +119,36 @@ async function getContractStats() {
 }
 
 /**
+ * Safely convert timestamp to ISO date
+ */
+function safeDate(timestamp) {
+  try {
+    const ts = Number(timestamp);
+    if (!ts || isNaN(ts) || ts <= 0) return null;
+    return new Date(ts * 1000).toISOString();
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
  * Format payment data for API response
  */
 function formatPayment(payment) {
   if (!payment) return null;
+
+  // Handle Soroban Enum variants (e.g. ['Active'])
+  let statusStr = "UNKNOWN";
+  let statusCode = payment.status;
+
+  if (Array.isArray(payment.status) && payment.status.length > 0) {
+    statusStr = payment.status[0].toUpperCase();
+    statusCode = payment.status[0]; // Use the string value
+  } else if (typeof payment.status === "string") {
+    statusStr = payment.status.toUpperCase();
+  } else {
+    statusStr = STATUS_MAP[payment.status] || "UNKNOWN";
+  }
 
   return {
     id: Number(payment.id),
@@ -132,15 +160,13 @@ function formatPayment(payment) {
     interval: Number(payment.interval),
     intervalFormatted: formatInterval(Number(payment.interval)),
     nextExecution: Number(payment.next_execution),
-    nextExecutionDate: new Date(
-      Number(payment.next_execution) * 1000,
-    ).toISOString(),
+    nextExecutionDate: safeDate(payment.next_execution),
     lastExecutionLedger: Number(payment.last_execution_ledger),
-    status: STATUS_MAP[payment.status] || "UNKNOWN",
-    statusCode: payment.status,
+    status: statusStr,
+    statusCode: statusCode,
     retryCount: Number(payment.retry_count),
     createdAt: Number(payment.created_at),
-    createdAtDate: new Date(Number(payment.created_at) * 1000).toISOString(),
+    createdAtDate: safeDate(payment.created_at),
     subType: SUB_TYPE_MAP[payment.sub_type] || "Unknown",
     subTypeCode: payment.sub_type,
     totalCycles: Number(payment.total_cycles),

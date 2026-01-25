@@ -1,12 +1,12 @@
 ℹ️  Simulating install transaction…
-ℹ️  Signing transaction: 11a07d3fdda39e495b9d9c9fcc8cac91f1bbe1d01e2a1dfe688fae68a8ec883c
+ℹ️  Signing transaction: eb55421aa05881286a5b852fa0f72d779f6e92b785234ee8988311e1872feb8b
 🌎 Submitting install transaction…
-ℹ️  Using wasm hash 49eb14274fd7da6e1dfaa7d6ab34d15e95754b6ec27df7960424b92678f5abf8
+ℹ️  Using wasm hash c88149434b1223e22144b8d0de8dfb5c5d43ca42a38014b2b5689d692cdc2a49
 ℹ️  Simulating deploy transaction…
-ℹ️  Transaction hash is 8cc875602bb43d46be60f70aefc8decaed86a6a1e61ead5de25a0079b0c5b927
-🔗 https://stellar.expert/explorer/testnet/tx/8cc875602bb43d46be60f70aefc8decaed86a6a1e61ead5de25a0079b0c5b927
-ℹ️  Signing transaction: 8cc875602bb43d46be60f70aefc8decaed86a6a1e61ead5de25a0079b0c5b927
+ℹ️  Transaction hash is 68dc1ff289fcb9721c20798ffb488328aebb0e231056b67d817ac423208363a5
+🔗 https://stellar.expert/explorer/testnet/tx/68dc1ff289fcb9721c20798ffb488328aebb0e231056b67d817ac423208363a5
+ℹ️  Signing transaction: 68dc1ff289fcb9721c20798ffb488328aebb0e231056b67d817ac423208363a5
 🌎 Submitting deploy transaction…
-🔗 https://lab.stellar.org/r/testnet/contract/CAMJLI4IABGKDPGDBHEYXOQ427SC2W5ZYGVJTR4BUZJPKRXEUBSXXCUP
+🔗 https://lab.stellar.org/r/testnet/contract/CBNAJYDLKSEP6QAWCOSFWFHELDQWDVGNDBVHSKSFHBH3PKJIJG2OH6SN
 ✅ Deployed!
-CAMJLI4IABGKDPGDBHEYXOQ427SC2W5ZYGVJTR4BUZJPKRXEUBSXXCUP
+CBNAJYDLKSEP6QAWCOSFWFHELDQWDVGNDBVHSKSFHBH3PKJIJG2OH6SN

@@ -240,6 +240,75 @@ impl StripeLikeSubscriptions {
         Ok(payment_id)
     }
 
+    pub fn create_payment(
+        env: Env,
+        payer: Address,
+        recipient: Address,
+        token: Address,
+        amount: i128,
+        interval: u64,
+        total_cycles: u64,
+        sub_type_symbol: soroban_sdk::Symbol,
+    ) -> Result<u64, Error> {
+        payer.require_auth();
+
+        if amount <= 0 {
+            return Err(Error::InvalidAmount);
+        }
+        if interval < MIN_INTERVAL {
+            return Err(Error::InvalidInterval);
+        }
+
+        // Convert symbol to enum
+        let sub_type = if sub_type_symbol == symbol_short!("AutoPay") {
+            SubscriptionType::AutoPay
+        } else {
+            SubscriptionType::Prepaid
+        };
+
+        let token_client = token::Client::new(&env, &token);
+
+        let prepaid_balance = if sub_type == SubscriptionType::Prepaid {
+            let total_amount = amount.checked_mul(total_cycles as i128).unwrap_or(0);
+            if total_amount <= 0 {
+                return Err(Error::InvalidAmount);
+            }
+            token_client.transfer(&payer, &env.current_contract_address(), &total_amount);
+            total_amount
+        } else {
+            0
+        };
+
+        let payment_count: u64 = env.storage()
+            .instance()
+            .get(&StorageKey::PaymentCount)
+            .unwrap_or(0);
+
+        let payment_id = payment_count + 1;
+
+        let payment = Payment {
+            id: payment_id,
+            payer: payer.clone(),
+            recipient,
+            token,
+            amount,
+            interval,
+            next_execution: env.ledger().timestamp(),
+            last_ledger: 0,
+            status: PaymentStatus::Active,
+            retries: 0,
+            sub_type,
+            total_cycles,
+            paid_cycles: 0,
+            prepaid_balance,
+        };
+
+        env.storage().persistent().set(&StorageKey::Payment(payment_id), &payment);
+        env.storage().instance().set(&StorageKey::PaymentCount, &payment_id);
+
+        Ok(payment_id)
+    }
+
     /* ---------------- EXECUTION ---------------- */
 
     pub fn execute_batch(
@@ -317,7 +386,59 @@ impl StripeLikeSubscriptions {
         }
 
         env.storage().persistent().set(&StorageKey::Payment(payment_id), &payment);
+        env.storage().persistent().set(&StorageKey::Payment(payment_id), &payment);
         Ok(true)
+    }
+
+    /* ---------------- LIFECYLE ---------------- */
+
+    pub fn pause_payment(env: Env, payment_id: u64) -> Result<(), Error> {
+        let mut payment = Self::get_payment(env.clone(), payment_id)?;
+        payment.payer.require_auth();
+
+        if payment.status != PaymentStatus::Active {
+            return Err(Error::PaymentInactive);
+        }
+
+        payment.status = PaymentStatus::Paused;
+        env.storage().persistent().set(&StorageKey::Payment(payment_id), &payment);
+        Ok(())
+    }
+
+    pub fn resume_payment(env: Env, payment_id: u64) -> Result<(), Error> {
+        let mut payment = Self::get_payment(env.clone(), payment_id)?;
+        payment.payer.require_auth();
+
+        if payment.status != PaymentStatus::Paused {
+            return Err(Error::PaymentInactive);
+        }
+
+        payment.status = PaymentStatus::Active;
+        // Optionally update next_execution if it's in the past to prevent immediate execution accumulation
+        // For now, we leave it as is, meaning it might be executed immediately if due.
+        
+        env.storage().persistent().set(&StorageKey::Payment(payment_id), &payment);
+        Ok(())
+    }
+
+    pub fn cancel_payment(env: Env, payment_id: u64) -> Result<(), Error> {
+        let mut payment = Self::get_payment(env.clone(), payment_id)?;
+        payment.payer.require_auth();
+
+        if payment.status == PaymentStatus::Cancelled {
+            return Err(Error::AlreadyCancelled);
+        }
+
+        // If prepaid and has balance, refund it
+        if payment.sub_type == SubscriptionType::Prepaid && payment.prepaid_balance > 0 {
+            let token_client = token::Client::new(&env, &payment.token);
+            token_client.transfer(&env.current_contract_address(), &payment.payer, &payment.prepaid_balance);
+            payment.prepaid_balance = 0;
+        }
+
+        payment.status = PaymentStatus::Cancelled;
+        env.storage().persistent().set(&StorageKey::Payment(payment_id), &payment);
+        Ok(())
     }
 
     /* ---------------- QUERY ---------------- */

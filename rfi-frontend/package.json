@@ -24,6 +24,7 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@stellar/freighter-api": "^6.0.1",
     "@stellar/stellar-sdk": "^14.4.3",
+    "quantx-sdk": "file:../../quantx-sdk",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

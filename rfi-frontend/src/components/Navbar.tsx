@@ -40,14 +40,13 @@ export default function Navbar() {
 
         {user ? (
           <div className="flex items-center gap-4 pl-4 border-l-[3px] border-ink ml-2">
-             <span className="text-xs font-bold font-mono hidden sm:inline-block">
+             <span className="text-xl font-bold font-mono hidden sm:inline-block">
                 {user.name}
              </span>
             <Button
               variant="ghost"
-              size="sm"
               onClick={logout}
-              className="text-destructive hover:text-white"
+              className="text-destructive hover:text-white text-xl font-bold"
             >
               EXIT
             </Button>

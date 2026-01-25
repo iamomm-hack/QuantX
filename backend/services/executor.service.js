@@ -44,9 +44,9 @@ async function run() {
     );
 
     // Get tracked payments from local DB
-    const trackedPayments = db.getActivePayments();
+    const trackedPayments = await db.getActivePayments();
 
-    if (trackedPayments.length === 0) {
+    if (!trackedPayments || trackedPayments.length === 0) {
       console.log("[Executor] No active payments to process");
       return results;
     }
@@ -78,7 +78,7 @@ async function run() {
           });
 
           // Update DB
-          db.recordExecution(tracked.payment_id, {
+          await db.recordExecution(tracked.payment_id, {
             success: true,
             hash: execResult.hash,
             timestamp: Date.now(),
@@ -92,7 +92,7 @@ async function run() {
           });
 
           // Update DB with failure
-          db.recordExecution(tracked.payment_id, {
+          await db.recordExecution(tracked.payment_id, {
             success: false,
             error: execResult.error,
             timestamp: Date.now(),
@@ -136,10 +136,10 @@ async function executePayment(paymentId) {
   console.log(`[Executor] Executing payment ${paymentId}...`);
 
   try {
-    const id = sorobanService.toScVal(paymentId, "u64");
+    // const id = sorobanService.toScVal(paymentId, "u64");
     const result = await sorobanService.callContractWrite(
       "execute_payment",
-      id,
+      paymentId,
     );
 
     if (result.success) {
@@ -178,35 +178,35 @@ async function executePayment(paymentId) {
 /**
  * Get executor statistics
  */
-function getStats() {
+async function getStats() {
   return {
     ...stats,
     isRunning,
     lastRunTime: lastRunTime ? lastRunTime.toISOString() : null,
-    trackedPayments: db.getPaymentCount(),
-    activePayments: db.getActivePaymentCount(),
+    trackedPayments: await db.getPaymentCount(),
+    activePayments: await db.getActivePaymentCount(),
   };
 }
 
 /**
  * Track a new payment for execution
  */
-function trackPayment(paymentId) {
-  return db.addPayment(paymentId);
+async function trackPayment(paymentId) {
+  return await db.addPayment(paymentId);
 }
 
 /**
  * Stop tracking a payment
  */
-function untrackPayment(paymentId) {
-  return db.removePayment(paymentId);
+async function untrackPayment(paymentId) {
+  return await db.removePayment(paymentId);
 }
 
 /**
  * Update payment status in tracking
  */
-function updatePaymentStatus(paymentId, status) {
-  return db.updatePaymentStatus(paymentId, status);
+async function updatePaymentStatus(paymentId, status) {
+  return await db.updatePaymentStatus(paymentId, status);
 }
 
 /**

@@ -125,20 +125,30 @@ export default function DashboardPage() {
             status = statusMap[code] || "Active";
           }
 
-          return {
-            id: p.id.toString(),
-            recipient: p.recipient || p.payer || "Unknown",
-            token: "USDC",
-            amount: (p.amount || 0) / 10000000,
-            interval: p.intervalFormatted || formatInterval(p.interval || 0),
-            nextExecution: p.nextExecution || p.next_execution || 0,
-            status,
-            paidCycles: p.paidCycles || p.paid_cycles || 0,
-            totalCycles: p.totalCycles || p.total_cycles || 0,
-          };
+            // Dynamic token display (basic check)
+            const isUSDC = p.token.includes("CBIELTK"); // Testnet USDC check
+            const tokenSymbol = isUSDC ? "USDC" : "XLM"; 
+            
+            return {
+              id: p.id.toString(),
+              recipient: p.recipient || p.payer || "Unknown",
+              token: tokenSymbol,
+              amount: p.amountFormatted || (p.amount || 0) / 10000000,
+              interval: p.intervalFormatted || formatInterval(p.interval || 0),
+              nextExecution: p.nextExecution || p.next_execution || 0,
+              status,
+              paidCycles: p.paidCycles || p.paid_cycles || 0,
+              totalCycles: p.totalCycles || p.total_cycles || 0,
+            };
         });
         console.log("Mapped subscriptions:", subscriptions);
-        setData(subscriptions);
+        
+        // Filter out Cancelled and Completed payments
+        const activeSubscriptions = subscriptions.filter(
+          sub => sub.status !== "Cancelled" && sub.status !== "Completed"
+        );
+        
+        setData(activeSubscriptions);
       } else {
         console.log("No payments found or empty response");
         setData([]);
@@ -187,14 +197,11 @@ export default function DashboardPage() {
         .setTimeout(30)
         .build();
 
-      // Simulate first
-      const simulated = await server.simulateTransaction(transaction);
-      if ("error" in simulated) {
-        throw new Error(`Simulation failed: ${simulated.error}`);
-      }
+      // Prepare transaction (simulate + assemble with auth and fees)
+      const preparedTx = await server.prepareTransaction(transaction);
 
       // Sign with Freighter
-      const signedResult = await signTransaction(transaction.toXDR(), {
+      const signedResult = await signTransaction(preparedTx.toXDR(), {
         networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
       });
 
@@ -214,14 +221,63 @@ export default function DashboardPage() {
         Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET
       );
 
-      await server.sendTransaction(signedTx);
+      // Helper to wait for transaction confirmation
+      const waitForTransaction = async (hash: string) => {
+        let status = "PENDING";
+        let result;
+        // Poll every 2 seconds
+        while (status === "PENDING" || status === "NOT_FOUND") {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          try {
+            result = await server.getTransaction(hash);
+            status = result.status;
+          } catch (e) {
+            console.log("Waiting for transaction index...");
+          }
+        }
+        if (status === "FAILED") {
+          throw new Error(`Transaction failed: ${JSON.stringify(result)}`);
+        }
+        return result;
+      };
+
+      console.log(`Sending action ${action} for payment ${paymentId}...`);
+      const response = await server.sendTransaction(signedTx);
       
-      // Refresh data after successful action
-      setTimeout(fetchSubscriptions, 2000);
+      if (response.status === "PENDING") {
+          console.log(`Action sent (${response.hash}). Waiting for confirmation...`);
+          await waitForTransaction(response.hash);
+          console.log("Action confirmed!");
+      } else if (response.status === "ERROR") {
+           throw new Error(`Action failed: ${JSON.stringify(response)}`);
+      }
+      
+      // Refresh data after successful action (with delay to ensure backend updates)
+      setTimeout(async () => {
+        await fetchSubscriptions();
+      }, 1000);
       
     } catch (err: any) {
       console.error(`${action} failed:`, err);
-      alert(`Action failed: ${err.message}`);
+      
+      // Parse contract errors for user-friendly messages
+      let errorMessage = err.message || "Unknown error occurred";
+      
+      if (errorMessage.includes("Error(Contract, #5)")) {
+        if (action === "pause_payment") {
+          errorMessage = "This payment is already paused or inactive.";
+        } else if (action === "cancel_payment") {
+          errorMessage = "This payment is already cancelled or inactive.";
+        } else {
+          errorMessage = "This payment is not active.";
+        }
+      } else if (errorMessage.includes("Error(Contract, #13)")) {
+        errorMessage = "This payment is already cancelled.";
+      } else if (errorMessage.includes("Error(Contract, #1)")) {
+        errorMessage = "Not authorized to perform this action.";
+      }
+      
+      alert(`Action failed: ${errorMessage}`);
     } finally {
       setActionLoading(null);
     }
@@ -446,7 +502,7 @@ export default function DashboardPage() {
 function StatusBadge({ status }: { status: SubscriptionStatus }) {
   const styles: Record<SubscriptionStatus, string> = {
     Active: "bg-emerald-100 text-emerald-900 border-emerald-900",
-    Paused: "bg-amber-100 text-amber-900 border-amber-900",
+    Paused: "bg-red-100 text-red-900 border-red-900",
     Failed: "bg-red-100 text-red-900 border-red-900",
     Cancelled: "bg-slate-200 text-slate-900 border-slate-900",
     Completed: "bg-blue-100 text-blue-900 border-blue-900",

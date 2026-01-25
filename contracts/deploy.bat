@@ -58,7 +58,7 @@ echo.
 REM Step 4: Initialize contract
 echo [4/4] Initializing contract...
 for /f "tokens=*" %%a in ('stellar keys address deployer') do set ADMIN_ADDRESS=%%a
-stellar contract invoke --id %CONTRACT_ID% --source deployer --network testnet -- initialize --admin %ADMIN_ADDRESS%
+stellar contract invoke --id %CONTRACT_ID% --source deployer --network testnet -- initialize --admin %ADMIN_ADDRESS% --treasury %ADMIN_ADDRESS% --platform_fee_bps 50 --treasury %ADMIN_ADDRESS% --platform_fee_bps 50
 
 if %errorlevel% neq 0 (
     echo WARNING: Initialization may have failed. Check manually.

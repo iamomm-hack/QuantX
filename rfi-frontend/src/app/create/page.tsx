@@ -25,6 +25,7 @@ import {
 } from "@stellar/stellar-sdk";
 import { signTransaction } from "@stellar/freighter-api";
 import { useRouter } from "next/navigation";
+import { useQuantX } from "@/hooks/use-quantx";
 
 // --- Configuration ---
 const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID || "";
@@ -35,6 +36,7 @@ const DEV_MODE = process.env.NEXT_PUBLIC_DEV_MODE === "true";
 
 export default function CreatePaymentPage() {
   const { isConnected: walletConnected, address: publicKey } = useWallet();
+  const client = useQuantX();
   const router = useRouter();
 
   const [formStep, setFormStep] = useState<"form" | "confirmation">("form");
@@ -80,137 +82,41 @@ export default function CreatePaymentPage() {
         return;
       }
 
-      // --- Stellar Contract Logic ---
-      const server = new SorobanRpc.Server(RPC_URL);
-      const contract = new Contract(CONTRACT_ID);
-      const tokenContract = new Contract(process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2EZ4YXL");
+      // === Use SDK ===
+      if (!client) throw new Error("QuantX Client not initialized");
       
-      // Convert interval string to seconds
-      let intervalSeconds = 2592000; // Monthly default
+      // Determine token contract based on selection
+      const isXLM = formData.token === "XLM";
+      const tokenAddress = isXLM 
+        ? "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC" // Native XLM (Testnet)
+        : (process.env.NEXT_PUBLIC_TOKEN_ADDRESS || "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"); // USDC (Testnet)
+
+      // Verify and Approve Allowance
+      console.log("Step 1: Approving token spending...");
+      const approvalTx = await client.approveAllowance(tokenAddress, formData.amount);
+      if (approvalTx.status !== "SUCCESS") {
+          throw new Error(`Approval failed: ${approvalTx.error}`);
+      }
+      console.log("Approval confirmed:", approvalTx.hash);
+
+      // Create Payment
+      console.log("Step 2: Creating recurring payment...");
+      let intervalSeconds = 2592000;
       if (formData.interval === "weekly") intervalSeconds = 604800;
       if (formData.interval === "custom") intervalSeconds = 60;
 
-      // Amount with decimals (assuming 7 decimals for USDC/Stellar tokens usually)
-      const amountBigInt = BigInt(
-        Math.floor(parseFloat(formData.amount) * 10000000),
-      );
-
-      // For AutoPay, we need to approve the contract to spend tokens
-      const approvalAmount = amountBigInt * BigInt(100);
-
-      // Get current ledger for approval expiration
-      const ledgerResponse = await server.getLatestLedger();
-      const currentLedger = ledgerResponse.sequence;
-      // Max allowed is ~3.1M ledgers, so use 2M (~115 days at 5s/ledger) to be safe
-      const expirationLedger = currentLedger + 2000000;
-
-      // === STEP 1: Approve Token Spending ===
-      console.log("Step 1: Approving token spending...");
-      const account1 = await server.getAccount(publicKey);
-      
-      const approvalTx = new TransactionBuilder(account1, {
-        fee: BASE_FEE,
-        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
-      })
-        .addOperation(
-          tokenContract.call(
-            "approve",
-            nativeToScVal(publicKey, { type: "address" }),
-            nativeToScVal(CONTRACT_ID, { type: "address" }),
-            nativeToScVal(approvalAmount, { type: "i128" }),
-            nativeToScVal(expirationLedger, { type: "u32" }),
-          )
-        )
-        .setTimeout(30)
-        .build();
-
-      // Simulate approval transaction
-      const simulatedApproval = await server.simulateTransaction(approvalTx);
-      if (SorobanRpc.Api.isSimulationError(simulatedApproval)) {
-        throw new Error(`Approval simulation failed: ${simulatedApproval.error}`);
-      }
-
-      const preparedApprovalTx = SorobanRpc.assembleTransaction(approvalTx, simulatedApproval).build();
-
-      // Sign and send approval
-      const approvalSignedResult = await signTransaction(preparedApprovalTx.toXDR(), {
-        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
+      const paymentTx = await client.subscribe({
+          recipient: receiverAddress,
+          token: tokenAddress,
+          amount: formData.amount,
+          interval: intervalSeconds,
+          subType: 0
       });
 
-      let approvalSignedXdr = "";
-      if (typeof approvalSignedResult === "string") {
-        approvalSignedXdr = approvalSignedResult;
-      } else if ("signedTxXdr" in approvalSignedResult) {
-        approvalSignedXdr = (approvalSignedResult as any).signedTxXdr;
+      if (paymentTx.status !== "SUCCESS") {
+           throw new Error(`Payment creation failed: ${paymentTx.error}`);
       }
-
-      if (!approvalSignedXdr) {
-        throw new Error("Failed to sign approval transaction");
-      }
-
-      const signedApprovalTx = TransactionBuilder.fromXDR(
-        approvalSignedXdr,
-        Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
-      );
-
-      console.log("Sending approval transaction...");
-      await server.sendTransaction(signedApprovalTx);
-      
-      // Wait a bit for approval to be processed
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // === STEP 2: Create Payment ===
-      console.log("Step 2: Creating recurring payment...");
-      const account2 = await server.getAccount(publicKey);
-
-      const paymentTx = new TransactionBuilder(account2, {
-        fee: BASE_FEE,
-        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
-      })
-        .addOperation(
-          contract.call(
-            "subscribe_to_plan",
-            nativeToScVal(publicKey, { type: "address" }), // payer
-            nativeToScVal(1, { type: "u32" }), // plan_id (using plan 1)
-            nativeToScVal(receiverAddress, { type: "address" }), // recipient
-            nativeToScVal(BigInt(0), { type: "u64" }), // total_cycles (0 = unlimited)
-            nativeToScVal("AutoPay", { type: "symbol" }), // sub_type
-          ),
-        )
-        .setTimeout(30)
-        .build();
-
-      // Simulate payment creation
-      const simulatedPayment = await server.simulateTransaction(paymentTx);
-      if (SorobanRpc.Api.isSimulationError(simulatedPayment)) {
-        throw new Error(`Payment creation simulation failed: ${simulatedPayment.error}`);
-      }
-
-      const preparedPaymentTx = SorobanRpc.assembleTransaction(paymentTx, simulatedPayment).build();
-
-      // Sign and send payment creation
-      const paymentSignedResult = await signTransaction(preparedPaymentTx.toXDR(), {
-        networkPassphrase: Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
-      });
-
-      let paymentSignedXdr = "";
-      if (typeof paymentSignedResult === "string") {
-        paymentSignedXdr = paymentSignedResult;
-      } else if ("signedTxXdr" in paymentSignedResult) {
-        paymentSignedXdr = (paymentSignedResult as any).signedTxXdr;
-      }
-
-      if (!paymentSignedXdr) {
-        throw new Error("Failed to sign payment transaction");
-      }
-
-      const signedPaymentTx = TransactionBuilder.fromXDR(
-        paymentSignedXdr,
-        Networks[NETWORK as keyof typeof Networks] || Networks.TESTNET,
-      );
-
-      console.log("Sending payment creation transaction...");
-      await server.sendTransaction(signedPaymentTx);
+      console.log("Payment confirmed:", paymentTx.hash);
 
       // Success!
       setFormStep("confirmation");
