@@ -20,7 +20,7 @@ const syne = Syne({
 });
 
 export const metadata: Metadata = {
-  title: "The Edge // Construct",
+  title: "QunatX",
   description: "Automated On-Chain Subscriptions",
 };
 
