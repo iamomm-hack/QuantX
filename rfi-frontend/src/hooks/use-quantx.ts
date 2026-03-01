@@ -1,5 +1,5 @@
 import { useWallet } from "@/context/wallet-provider";
-import { QuantXClient } from "../../../quantx-sdk"; // Check if path is correct for you
+import { QuantXClient } from "quantx-sdk";
 import { signTransaction } from "@stellar/freighter-api";
 import { useEffect, useState } from "react";
 
