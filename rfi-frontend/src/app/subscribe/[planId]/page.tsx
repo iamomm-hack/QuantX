@@ -302,7 +302,7 @@ export default function SubscribePage() {
               <CardDescription>Choose how you want to pay</CardDescription>
             </CardHeader>
             <CardContent>
-              <RadioGroup value={subType} onValueChange={(v) => setSubType(v as any)}>
+              <RadioGroup value={subType} onValueChange={(v: string) => setSubType(v as any)}>
                 <div className="flex items-start space-x-3 p-4 border-[2px] border-ink rounded mb-3 cursor-pointer hover:bg-accent">
                   <RadioGroupItem value="AutoPay" id="autopay" />
                   <div className="flex-1">
@@ -352,7 +352,7 @@ export default function SubscribePage() {
               <CardDescription>When should the first payment happen?</CardDescription>
             </CardHeader>
             <CardContent>
-              <RadioGroup value={chargeStart} onValueChange={(v) => setChargeStart(v as any)}>
+              <RadioGroup value={chargeStart} onValueChange={(v: string) => setChargeStart(v as any)}>
                 <div className="flex items-start space-x-3 p-4 border-[2px] border-ink rounded mb-3 cursor-pointer hover:bg-accent">
                   <RadioGroupItem value="Immediate" id="immediate" />
                   <div className="flex-1">
