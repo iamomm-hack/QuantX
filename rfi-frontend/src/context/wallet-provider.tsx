@@ -8,7 +8,7 @@ import {
   getNetwork,
 } from "@stellar/freighter-api";
 
-type WalletType = "freighter" | null;
+type WalletType = "freighter" | "albedo" | null;
 type Network = "PUBLIC" | "TESTNET" | "UNKNOWN";
 
 interface WalletContextType {

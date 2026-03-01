@@ -91,21 +91,21 @@ export default function CreateSubscriptionPage() {
   const [isApproving, setIsApproving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // FIXED 2: Explicitly typed useForm to prevent 'Control' mismatch errors
-  const form = useForm<FormValues>({
+  // FIXED 2: Let react-hook-form infer types from the zodResolver to avoid mismatch
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       recipient: "",
-      token: "USDC",
-      amount: 0,
+      token: "USDC" as const,
+      amount: 0.0000001,
       interval: "2592000", // Default to Monthly
       startDate: new Date(),
     },
   });
 
   // Watch values
-  const watchedAmount = form.watch("amount");
-  const watchedToken = form.watch("token");
+  const watchedAmount = form.watch("amount") as number;
+  const watchedToken = form.watch("token") as "USDC" | "XLM";
 
   // --- 1. Allowance Check Effect ---
   useEffect(() => {
@@ -273,6 +273,7 @@ export default function CreateSubscriptionPage() {
                           step="0.0000001"
                           placeholder="0.00"
                           {...field}
+                          value={field.value as number}
                           onChange={(e) => {
                             const val =
                               e.target.value === ""
