@@ -2,7 +2,8 @@
 
 <div align="center">
 
-<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/4f922dfb-1c82-4695-ab31-13b3678507c1" />
+<img width="595" height="452" alt="image" src="https://github.com/user-attachments/assets/714580e4-cc93-48f2-a111-a5bd269d784b" />
+
 
 
 **The "Stripe" for Web3 Recurring Payments**
