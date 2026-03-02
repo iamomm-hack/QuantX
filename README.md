@@ -2,7 +2,8 @@
 
 <div align="center">
 
-<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/4f922dfb-1c82-4695-ab31-13b3678507c1" />
+<img width="595" height="452" alt="image" src="https://github.com/user-attachments/assets/714580e4-cc93-48f2-a111-a5bd269d784b" />
+
 
 
 **The "Stripe" for Web3 Recurring Payments**
@@ -19,7 +20,7 @@
 ---
 
 
-##UI
+###UI
 <img width="1919" height="906" alt="image" src="https://github.com/user-attachments/assets/777b3649-823c-45fc-802f-676fabe19898" />
 
 <img width="1919" height="917" alt="image" src="https://github.com/user-attachments/assets/eb1c4ad7-2978-476f-9637-3b5591fc39b5" />
@@ -325,7 +326,7 @@ Before you begin, ensure you have the following installed:
 
 #### 1. Clone the Repository
 ```bash
-git clone https://github.com/Amitshah18/QuantX.git
+git clone https://github.com/iamomm-hack/QuantX.git
 cd QuantX
 ```
 
