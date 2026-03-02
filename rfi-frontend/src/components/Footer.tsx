@@ -29,14 +29,14 @@ export default function Footer() {
         {/* Socials */}
         <div className="flex gap-4">
           <Link
-            href="https://github.com"
+            href="https://github.com/iamomm-hack"
             target="_blank"
             className="text-gray-400 hover:text-black transition-colors"
           >
             <Github className="h-5 w-5" />
           </Link>
           <Link
-            href="https://twitter.com"
+            href="https://x.com/omdotcmd"
             target="_blank"
             className="text-gray-400 hover:text-black transition-colors"
           >
