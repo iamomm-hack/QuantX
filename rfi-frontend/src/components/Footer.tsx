@@ -15,13 +15,13 @@ export default function Footer() {
 
         {/* Links */}
         <div className="flex gap-6 text-sm font-medium text-gray-600">
-          <Link href="#" className="hover:text-black transition-colors">
+          <Link href="https://github.com/iamomm-hack/QuantX/blob/main/README.md" className="hover:text-black transition-colors">
             Documentation
           </Link>
-          <Link href="#" className="hover:text-black transition-colors">
+          <Link href="https://github.com/iamomm-hack/QuantX/blob/main/contracts/recurring_payment/target/wasm32-unknown-unknown/release/recurring_payment.wasm" className="hover:text-black transition-colors">
             Smart Contracts
           </Link>
-          <Link href="#" className="hover:text-black transition-colors">
+          <Link href="https://github.com/iamomm-hack/QuantX/blob/main/LICENSE" className="hover:text-black transition-colors">
             Privacy
           </Link>
         </div>
@@ -29,7 +29,7 @@ export default function Footer() {
         {/* Socials */}
         <div className="flex gap-4">
           <Link
-            href="https://github.com/iamomm-hack"
+            href="https://github.com/iamomm-hack/QuantX"
             target="_blank"
             className="text-gray-400 hover:text-black transition-colors"
           >
