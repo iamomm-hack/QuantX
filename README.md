@@ -27,8 +27,53 @@
 
 <img width="343" height="628" alt="image" src="https://github.com/user-attachments/assets/4a39a08e-aac4-4214-9520-daea8e438084" />
 
+---
 
+## 🚀 Stellar Journey Level 3 Submission
 
+> This project was originally built during the **Kolkata Hackathon** and has been enhanced for the Stellar Journey program.
+
+| Requirement | Status |
+|-------------|--------|
+| Mini-dApp Functional | ✅ Complete |
+| README Documentation | ✅ Complete |
+| 3+ Meaningful Commits | ✅ 12+ commits in March 2026 |
+| 3+ Tests Passing | ✅ 10 tests passing |
+| Live Demo | ✅ [quantx-app.vercel.app](https://quantx-app.vercel.app) |
+| Demo Video | ✅ [Watch Demo (1 min)](https://youtu.be/YOUR_VIDEO_ID) |
+
+### Test Output
+
+```
+PASS src/utils.test.ts
+  QuantX SDK Utils
+    toContractAmount
+      ✓ should convert whole numbers correctly
+      ✓ should convert decimal amounts correctly
+      ✓ should handle zero
+    fromContractAmount
+      ✓ should convert contract amounts to human readable
+      ✓ should handle decimal results
+      ✓ should handle number input
+      ✓ should handle string input
+    isValidAddress
+      ✓ should return true for valid Stellar public keys
+      ✓ should return true for valid contract IDs
+      ✓ should return false for invalid addresses
+
+Test Suites: 1 passed, 1 total
+Tests:       10 passed, 10 total
+```
+
+### Run Tests Locally
+
+```bash
+cd quantx-sdk
+npm install
+npm test
+```
+
+---
 
 ## 🎯 Overview
 
