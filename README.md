@@ -31,38 +31,27 @@
 
 ## 🚀 Stellar Journey Level 3 Submission
 
-> This project was originally built during the **Kolkata Hackathon** and has been enhanced for the Stellar Journey program.
-
 | Requirement | Status |
 |-------------|--------|
 | Mini-dApp Functional | ✅ Complete |
 | README Documentation | ✅ Complete |
 | 3+ Meaningful Commits | ✅ 12+ commits in March 2026 |
 | 3+ Tests Passing | ✅ 10 tests passing |
-| Live Demo | ✅ [quantx-app.vercel.app](https://quantx-app.vercel.app) |
-| Demo Video | ✅ [Watch Demo (1 min)](https://youtu.be/YOUR_VIDEO_ID) |
+| Live Demo | ✅ [quantx-app.vercel.app](https://quantx-web.vercel.app/) |
 
-### Test Output
+### 📸 Test Output Screenshot
+
+![Test Output Screenshot]![alt text](image.png)
 
 ```
-PASS src/utils.test.ts
-  QuantX SDK Utils
-    toContractAmount
-      ✓ should convert whole numbers correctly
-      ✓ should convert decimal amounts correctly
-      ✓ should handle zero
-    fromContractAmount
-      ✓ should convert contract amounts to human readable
-      ✓ should handle decimal results
-      ✓ should handle number input
-      ✓ should handle string input
-    isValidAddress
-      ✓ should return true for valid Stellar public keys
-      ✓ should return true for valid contract IDs
-      ✓ should return false for invalid addresses
+PASS  tests/env.test.js
+  QuantX Backend Configuration Tests
+    ✓ 1. Environment Validator returns true when all required variables are present
+    ✓ 2. isExecutorConfigured returns true when both Contract ID and Secret are provided
+    ✓ 3. Environment variables use fallback variables for constants when undefined
 
 Test Suites: 1 passed, 1 total
-Tests:       10 passed, 10 total
+Tests:       3 passed, 3 total
 ```
 
 ### Run Tests Locally
